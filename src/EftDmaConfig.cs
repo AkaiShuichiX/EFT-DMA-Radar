@@ -26,6 +26,7 @@ SOFTWARE.
  *
 */
 
+using LoneEftDmaRadar.Common.DMA;
 using LoneEftDmaRadar.DMA;
 using LoneEftDmaRadar.Misc.JSON;
 using LoneEftDmaRadar.UI.ColorPicker;
@@ -614,6 +615,36 @@ namespace LoneEftDmaRadar
         public float EspLootConeAngle { get; set; } = 15f;
 
         /// <summary>
+        /// Show Food items on ESP.
+        /// </summary>
+        [JsonPropertyName("espFood")]
+        public bool EspFood { get; set; } = false;
+
+        /// <summary>
+        /// Show Medical items on ESP.
+        /// </summary>
+        [JsonPropertyName("espMeds")]
+        public bool EspMeds { get; set; } = false;
+
+        /// <summary>
+        /// Show Backpacks on ESP.
+        /// </summary>
+        [JsonPropertyName("espBackpacks")]
+        public bool EspBackpacks { get; set; } = false;
+
+        /// <summary>
+        /// Show Corpses on ESP.
+        /// </summary>
+        [JsonPropertyName("espCorpses")]
+        public bool EspCorpses { get; set; } = false;
+
+        /// <summary>
+        /// Show Containers on ESP.
+        /// </summary>
+        [JsonPropertyName("espContainers")]
+        public bool EspContainers { get; set; } = false;
+
+        /// <summary>
         /// Show a crosshair overlay on ESP window.
         /// </summary>
         [JsonPropertyName("espCrosshair")]
@@ -642,6 +673,30 @@ namespace LoneEftDmaRadar
         /// </summary>
         [JsonPropertyName("espMaxFPS")]
         public int EspMaxFPS { get; set; } = 0;
+
+        /// <summary>
+        /// Maximum distance to render players on ESP (in meters). 0 = unlimited.
+        /// </summary>
+        [JsonPropertyName("espPlayerMaxDistance")]
+        public float EspPlayerMaxDistance { get; set; } = 0f;
+
+        /// <summary>
+        /// Maximum distance to render AI/Scavs on ESP (in meters). 0 = unlimited.
+        /// </summary>
+        [JsonPropertyName("espAIMaxDistance")]
+        public float EspAIMaxDistance { get; set; } = 0f;
+
+        /// <summary>
+        /// Maximum distance to render loot on ESP (in meters). 0 = unlimited.
+        /// </summary>
+        [JsonPropertyName("espLootMaxDistance")]
+        public float EspLootMaxDistance { get; set; } = 0f;
+
+        /// <summary>
+        /// Target screen index for ESP window (0 = Primary, 1+ = Secondary screens).
+        /// </summary>
+        [JsonPropertyName("espTargetScreen")]
+        public int EspTargetScreen { get; set; } = 0;
     }
 
     public sealed class LootConfig

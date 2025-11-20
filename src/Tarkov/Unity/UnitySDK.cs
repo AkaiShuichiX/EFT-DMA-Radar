@@ -49,6 +49,12 @@ namespace LoneEftDmaRadar.Tarkov.Unity
             public const uint Hierarchy_VerticesOffset = 0x80;
             public const uint Hierarchy_IndicesOffset = 0x50;
 
+            public readonly struct Camera
+            {
+                public const uint ViewMatrix = 0x118;
+                public const uint FOV = 0x198;
+            }
+
             public static readonly uint[] GameWorldChain =
             [
                 GameObject_ComponentsOffset,        // 0x48

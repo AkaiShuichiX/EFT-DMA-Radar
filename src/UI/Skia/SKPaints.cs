@@ -288,6 +288,14 @@ namespace LoneEftDmaRadar.UI.Skia
             IsAntialias = true,
         };
 
+        public static SKPaint PaintFilteredLoot { get; } = new()
+        {
+            Color = SKColors.MediumPurple,
+            StrokeWidth = 0.25f,
+            Style = SKPaintStyle.Fill,
+            IsAntialias = true,
+        };
+
         public static SKPaint PaintContainerLoot { get; } = new()
         {
             Color = SKColor.Parse("FFFFCC"),
@@ -306,6 +314,13 @@ namespace LoneEftDmaRadar.UI.Skia
         public static SKPaint TextImportantLoot { get; } = new()
         {
             Color = SKColors.Turquoise,
+            IsStroke = false,
+            IsAntialias = true,
+        };
+
+        public static SKPaint TextFilteredLoot { get; } = new()
+        {
+            Color = SKColors.MediumPurple,
             IsStroke = false,
             IsAntialias = true,
         };

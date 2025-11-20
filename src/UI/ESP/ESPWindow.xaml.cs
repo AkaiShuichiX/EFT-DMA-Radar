@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using LoneEftDmaRadar.Misc;
 using LoneEftDmaRadar.Tarkov.GameWorld;
 using LoneEftDmaRadar.Tarkov.GameWorld.Exits;
@@ -7,14 +5,10 @@ using LoneEftDmaRadar.Tarkov.GameWorld.Loot;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player;
 using LoneEftDmaRadar.Tarkov.GameWorld.Player.Helpers;
 using LoneEftDmaRadar.Tarkov.Unity.Structures;
-using SkiaSharp;
-using SkiaSharp.Views.WPF;
-using System.Numerics;
-using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 using LoneEftDmaRadar.UI.Skia;
+using LoneEftDmaRadar.UI.Misc;
 
 namespace LoneEftDmaRadar.UI.ESP
 {
@@ -27,9 +21,9 @@ namespace LoneEftDmaRadar.UI.ESP
         private readonly System.Diagnostics.Stopwatch _fpsSw = new();
         private int _fpsCounter;
         private int _fps;
-        private readonly System.Diagnostics.Stopwatch _frameTimeSw = new();
-        private double _lastFrameTime;
-        
+        private long _lastFrameTicks;
+        private Timer _highFrequencyTimer;
+
         // Cached Fonts/Paints
         private readonly SKFont _textFont;
         private readonly SKPaint _textPaint;
@@ -168,27 +162,49 @@ namespace LoneEftDmaRadar.UI.ESP
             };
 
             _fpsSw.Start();
-            _frameTimeSw.Start();
-            
-            // Use CompositionTarget.Rendering for smoother 60fps (or refresh rate) loop
-            CompositionTarget.Rendering += OnRendering;
+            _lastFrameTicks = System.Diagnostics.Stopwatch.GetTimestamp();
+
+            // Start high-frequency render timer (1ms interval for up to 1000 FPS capability)
+            // This runs on a separate thread and is not limited by WPF's VSync
+            _highFrequencyTimer = new System.Threading.Timer(
+                callback: HighFrequencyRenderCallback,
+                state: null,
+                dueTime: 0,
+                period: 1); // 1ms = up to 1000 checks per second
         }
 
-        private void OnRendering(object sender, EventArgs e)
+        private void HighFrequencyRenderCallback(object state)
         {
-            int maxFPS = App.Config.UI.EspMaxFPS;
-            if (maxFPS > 0)
+            try
             {
-                double targetFrameTime = 1000.0 / maxFPS;
-                double elapsed = _frameTimeSw.Elapsed.TotalMilliseconds - _lastFrameTime;
-                
-                if (elapsed < targetFrameTime)
-                    return;
-                
-                _lastFrameTime = _frameTimeSw.Elapsed.TotalMilliseconds;
+                int maxFPS = App.Config.UI.EspMaxFPS;
+
+                // Calculate elapsed time since last frame
+                long currentTicks = System.Diagnostics.Stopwatch.GetTimestamp();
+                double elapsedMs = (currentTicks - _lastFrameTicks) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+
+                // Determine target frame time
+                // If maxFPS is 0, default to 144 FPS (about 6.94ms per frame)
+                // Otherwise use the specified FPS
+                double targetFrameTime = maxFPS > 0 ? (1000.0 / maxFPS) : (1000.0 / 144.0);
+
+                // Only render if enough time has passed
+                if (elapsedMs >= targetFrameTime)
+                {
+                    _lastFrameTicks = currentTicks;
+
+                    // Must dispatch to UI thread for rendering
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        try
+                        {
+                            RefreshESP();
+                        }
+                        catch { /* Ignore errors during shutdown */ }
+                    }), System.Windows.Threading.DispatcherPriority.Render);
+                }
             }
-            
-            RefreshESP();
+            catch { /* Ignore errors during shutdown */ }
         }
 
         #region Rendering Methods
@@ -210,6 +226,8 @@ namespace LoneEftDmaRadar.UI.ESP
             }
         }
 
+        private bool _lastInRaidState = false;
+
         /// <summary>
         /// Main ESP Render Event.
         /// </summary>
@@ -217,12 +235,22 @@ namespace LoneEftDmaRadar.UI.ESP
         {
             var canvas = e.Surface.Canvas;
             SetFPS();
-            
+
             // Clear with black background (transparent for fuser)
             canvas.Clear(SKColors.Black);
-            
+
             try
             {
+                // Detect raid state changes and reset camera/state when leaving raid
+                if (_lastInRaidState && !InRaid)
+                {
+                    CameraManager.Reset();
+                    _transposedViewMatrix = new TransposedViewMatrix();
+                    _camPos = Vector3.Zero;
+                    DebugLogger.LogInfo("ESP: Detected raid end - reset all state");
+                }
+                _lastInRaidState = InRaid;
+
                 if (!InRaid)
                     return;
 
@@ -297,23 +325,104 @@ namespace LoneEftDmaRadar.UI.ESP
             var lootItems = Memory.Game?.Loot?.FilteredLoot;
             if (lootItems is null) return;
 
-            var viewMatrix = _cameraManager.ViewMatrix;
-            var forward = new Vector3(viewMatrix.M13, viewMatrix.M23, viewMatrix.M33);
+            // Use cached forward vector from TransposedViewMatrix
+            var forward = _transposedViewMatrix.Forward;
 
             foreach (var item in lootItems)
             {
+                // Filter based on ESP settings
+                bool isCorpse = item is LootCorpse;
+                if (isCorpse && !App.Config.UI.EspCorpses)
+                    continue;
+
+                bool isContainer = item is LootContainer;
+                if (isContainer && !App.Config.UI.EspContainers)
+                    continue;
+
+                bool isFood = item.IsFood;
+                bool isMeds = item.IsMeds;
+                bool isBackpack = item.IsBackpack;
+
+                // Skip if it's one of these types and the setting is disabled
+                if (isFood && !App.Config.UI.EspFood)
+                    continue;
+                if (isMeds && !App.Config.UI.EspMeds)
+                    continue;
+                if (isBackpack && !App.Config.UI.EspBackpacks)
+                    continue;
+
+                // Check distance to loot
+                float distance = Vector3.Distance(_camPos, item.Position);
+                if (App.Config.UI.EspLootMaxDistance > 0 && distance > App.Config.UI.EspLootMaxDistance)
+                    continue;
+
                 if (WorldToScreen2(item.Position, out var screen, screenWidth, screenHeight))
                 {
-                     var dirToItem = Vector3.Normalize(item.Position - _camPos);
-                     var dot = Vector3.Dot(forward, dirToItem);
-                     dot = Math.Clamp(dot, -1f, 1f);
-                     var angle = MathF.Acos(dot) * (180f / MathF.PI);
-                     
+                     // Calculate cone filter based on screen position
                      bool coneEnabled = App.Config.UI.EspLootConeEnabled && App.Config.UI.EspLootConeAngle > 0f;
-                     bool inCone = !coneEnabled || angle <= App.Config.UI.EspLootConeAngle;
+                     bool inCone = true;
 
-                     canvas.DrawCircle(screen, 2f, _lootPaint);
-                     
+                     if (coneEnabled)
+                     {
+                         // Calculate angle from screen center
+                         float centerX = screenWidth / 2f;
+                         float centerY = screenHeight / 2f;
+                         float dx = screen.X - centerX;
+                         float dy = screen.Y - centerY;
+
+                         // Calculate angular distance from center (in screen space)
+                         // Using FOV to convert screen distance to angle
+                         float fov = App.Config.UI.FOV;
+                         float screenAngleX = MathF.Abs(dx / centerX) * (fov / 2f);
+                         float screenAngleY = MathF.Abs(dy / centerY) * (fov / 2f);
+                         float screenAngle = MathF.Sqrt(screenAngleX * screenAngleX + screenAngleY * screenAngleY);
+
+                         inCone = screenAngle <= App.Config.UI.EspLootConeAngle;
+                     }
+
+                     // Determine colors based on item type
+                     SKPaint circlePaint, textPaint;
+
+                     if (item.Important)
+                     {
+                         // Filtered important items (custom filters) - Purple
+                         circlePaint = SKPaints.PaintFilteredLoot;
+                         textPaint = SKPaints.TextFilteredLoot;
+                     }
+                     else if (item.IsValuableLoot)
+                     {
+                         // Valuable items (price >= minValueValuable) - Turquoise
+                         circlePaint = SKPaints.PaintImportantLoot;
+                         textPaint = SKPaints.TextImportantLoot;
+                     }
+                     else if (isBackpack)
+                     {
+                         circlePaint = SKPaints.PaintBackpacks;
+                         textPaint = SKPaints.TextBackpacks;
+                     }
+                     else if (isMeds)
+                     {
+                         circlePaint = SKPaints.PaintMeds;
+                         textPaint = SKPaints.TextMeds;
+                     }
+                     else if (isFood)
+                     {
+                         circlePaint = SKPaints.PaintFood;
+                         textPaint = SKPaints.TextFood;
+                     }
+                     else if (isCorpse)
+                     {
+                         circlePaint = SKPaints.PaintCorpse;
+                         textPaint = SKPaints.TextCorpse;
+                     }
+                     else
+                     {
+                         circlePaint = _lootPaint;
+                         textPaint = _lootTextPaint;
+                     }
+
+                     canvas.DrawCircle(screen, 2f, circlePaint);
+
                      if (item.Important || inCone)
                      {
                          var text = item.ShortName;
@@ -321,7 +430,7 @@ namespace LoneEftDmaRadar.UI.ESP
                          {
                              text = item.Important ? item.ShortName : $"{item.ShortName} ({Utilities.FormatNumberKM(item.Price)})";
                          }
-                         canvas.DrawText(text, screen.X + 4, screen.Y + 4, _lootTextFont, _lootTextPaint);
+                         canvas.DrawText(text, screen.X + 4, screen.Y + 4, _lootTextFont, textPaint);
                      }
                 }
             }
@@ -336,9 +445,19 @@ namespace LoneEftDmaRadar.UI.ESP
             if (player is null || player == localPlayer || !player.IsAlive || !player.IsActive)
                 return;
 
-            // Optimization: Skip players that are too far before W2S
+            // Check if this is AI or player
+            bool isAI = player.Type is PlayerType.AIScav or PlayerType.AIRaider or PlayerType.AIBoss or PlayerType.PScav;
+
+            // Optimization: Skip players/AI that are too far before W2S
             float distance = Vector3.Distance(localPlayer.Position, player.Position);
-            if (distance > App.Config.UI.MaxDistance) // Max render distance
+            float maxDistance = isAI ? App.Config.UI.EspAIMaxDistance : App.Config.UI.EspPlayerMaxDistance;
+
+            // If maxDistance is 0, it means unlimited, otherwise check distance
+            if (maxDistance > 0 && distance > maxDistance)
+                return;
+
+            // Fallback to old MaxDistance if the new settings aren't configured
+            if (maxDistance == 0 && distance > App.Config.UI.MaxDistance)
                 return;
 
             // Get Color
@@ -347,7 +466,6 @@ namespace LoneEftDmaRadar.UI.ESP
             _boxPaint.Color = color;
             _textPaint.Color = color;
 
-            bool isAI = player.Type is PlayerType.AIScav or PlayerType.AIRaider or PlayerType.AIBoss or PlayerType.PScav; // treat PScav as AI for now or separate? Config says "AI"
             bool drawSkeleton = isAI ? App.Config.UI.EspAISkeletons : App.Config.UI.EspPlayerSkeletons;
             bool drawBox = isAI ? App.Config.UI.EspAIBoxes : App.Config.UI.EspPlayerBoxes;
             bool drawName = isAI ? App.Config.UI.EspAINames : App.Config.UI.EspPlayerNames;
@@ -507,7 +625,7 @@ namespace LoneEftDmaRadar.UI.ESP
             {
                 Color = SKColors.White,
                 IsAntialias = true,
-                TextSize = 8,
+                TextSize = 10,
                 Typeface = SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold)
             };
             
@@ -518,37 +636,70 @@ namespace LoneEftDmaRadar.UI.ESP
 
         #region WorldToScreen Conversion
 
+        private TransposedViewMatrix _transposedViewMatrix = new();
+
         private void UpdateCameraPositionFromMatrix()
         {
             var viewMatrix = _cameraManager.ViewMatrix;
             _camPos = new Vector3(viewMatrix.M14, viewMatrix.M24, viewMatrix.M34);
+            _transposedViewMatrix.Update(ref viewMatrix);
         }
 
         private bool WorldToScreen2(in Vector3 world, out SKPoint scr, float screenWidth, float screenHeight)
         {
             scr = default;
 
-            var viewMatrix = _cameraManager.ViewMatrix;
+            float w = Vector3.Dot(_transposedViewMatrix.Translation, world) + _transposedViewMatrix.M44;
             
-            var worldPos = new Vector4(world.X, world.Y, world.Z, 1f);
-            var clipCoords = Vector4.Transform(worldPos, viewMatrix);
-
-            if (clipCoords.W < 0.1f)
+            if (w < 0.098f)
                 return false;
-
-            var ndc = new Vector3(
-                clipCoords.X / clipCoords.W,
-                clipCoords.Y / clipCoords.W,
-                clipCoords.Z / clipCoords.W
-            );
-
-            if (ndc.Z < 0f || ndc.Z > 1f)
-                return false;
-
-            scr.X = (ndc.X + 1f) * 0.5f * screenWidth;
-            scr.Y = (1f - ndc.Y) * 0.5f * screenHeight;
-
+            
+            float x = Vector3.Dot(_transposedViewMatrix.Right, world) + _transposedViewMatrix.M14;
+            float y = Vector3.Dot(_transposedViewMatrix.Up, world) + _transposedViewMatrix.M24;
+            
+            var centerX = screenWidth / 2f;
+            var centerY = screenHeight / 2f;
+            
+            scr.X = centerX * (1f + x / w);
+            scr.Y = centerY * (1f - y / w);
+            
             return true;
+        }
+
+        private class TransposedViewMatrix
+        {
+            public float M44;
+            public float M14;
+            public float M24;
+            public Vector3 Translation;
+            public Vector3 Right;
+            public Vector3 Up;
+            public Vector3 Forward;
+
+            public void Update(ref Matrix4x4 matrix)
+            {
+                M44 = matrix.M44;
+                M14 = matrix.M41;
+                M24 = matrix.M42;
+
+                Translation.X = matrix.M14;
+                Translation.Y = matrix.M24;
+                Translation.Z = matrix.M34;
+
+                Right.X = matrix.M11;
+                Right.Y = matrix.M21;
+                Right.Z = matrix.M31;
+
+                Up.X = matrix.M12;
+                Up.Y = matrix.M22;
+                Up.Z = matrix.M32;
+
+                // In Unity's View Matrix, forward is the negative Z-axis
+                // X is negated to match the horizontal orientation in EFT
+                Forward.X = matrix.M13;
+                Forward.Y = -matrix.M23;
+                Forward.Z = -matrix.M33;
+            }
         }
 
         private bool TryProject(in Vector3 world, float w, float h, out SKPoint screen)
@@ -583,7 +734,7 @@ namespace LoneEftDmaRadar.UI.ESP
 
         protected override void OnClosed(System.EventArgs e)
         {
-            CompositionTarget.Rendering -= OnRendering;
+            _highFrequencyTimer?.Dispose();
             skElement.PaintSurface -= OnPaintSurface;
             _textPaint.Dispose();
             _textBackgroundPaint.Dispose();
@@ -631,14 +782,56 @@ namespace LoneEftDmaRadar.UI.ESP
                 this.ResizeMode = ResizeMode.NoResize;
                 this.Topmost = true;
                 this.WindowState = WindowState.Normal;
+
+                // Get target screen
+                var targetScreenIndex = App.Config.UI.EspTargetScreen;
                 var (width, height) = GetConfiguredResolution();
-                this.Left = 0;
-                this.Top = 0;
+
+                // Position window based on screen selection
+                if (targetScreenIndex == 0)
+                {
+                    // Primary screen - position at 0,0
+                    this.Left = 0;
+                    this.Top = 0;
+                    if (width == SystemParameters.PrimaryScreenWidth && height == SystemParameters.PrimaryScreenHeight)
+                    {
+                        width = SystemParameters.PrimaryScreenWidth;
+                        height = SystemParameters.PrimaryScreenHeight;
+                    }
+                }
+                else
+                {
+                    // Secondary screen - position to the right of primary
+                    var primaryWidth = SystemParameters.PrimaryScreenWidth;
+                    var virtualLeft = SystemParameters.VirtualScreenLeft;
+                    var virtualTop = SystemParameters.VirtualScreenTop;
+
+                    // If secondary is to the left (negative coords)
+                    if (virtualLeft < 0)
+                    {
+                        this.Left = virtualLeft;
+                        this.Top = virtualTop;
+                    }
+                    else
+                    {
+                        // Secondary is to the right
+                        this.Left = primaryWidth;
+                        this.Top = 0;
+                    }
+
+                    if (width == SystemParameters.PrimaryScreenWidth && height == SystemParameters.PrimaryScreenHeight)
+                    {
+                        // Use virtual screen dimensions for secondary
+                        width = SystemParameters.VirtualScreenWidth - SystemParameters.PrimaryScreenWidth;
+                        height = SystemParameters.VirtualScreenHeight;
+                    }
+                }
+
                 this.Width = width;
                 this.Height = height;
                 _isFullscreen = true;
             }
-            
+
             this.RefreshESP();
         }
 

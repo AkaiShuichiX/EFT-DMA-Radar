@@ -37,6 +37,16 @@
                                   IsChecked="{Binding EspCrosshair, Mode=TwoWay}"
                                   Margin="0,0,16,8" />
                     </WrapPanel>
+
+                    <WrapPanel Margin="0,4,0,0">
+                        <TextBlock Text="Target Screen:" VerticalAlignment="Center" Margin="0,0,8,0" Width="100"/>
+                        <ComboBox Width="300"
+                                  ItemsSource="{Binding AvailableScreens}"
+                                  SelectedValue="{Binding EspTargetScreen, Mode=TwoWay}"
+                                  SelectedValuePath="Index"
+                                  DisplayMemberPath="DisplayName"
+                                  ToolTip="Select which monitor to display the ESP window on when using Start Fuser"/>
+                    </WrapPanel>
                     
                     <WrapPanel Margin="0,4,0,0">
                         <TextBlock Text="Resolution Override (0 = Auto): " VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -63,19 +73,51 @@
             </GroupBox>
 
             <GroupBox Header="Player ESP" Margin="0,0,0,12">
-                 <WrapPanel>
-                    <CheckBox Content="Box" IsChecked="{Binding EspPlayerBoxes, Mode=TwoWay}" Margin="0,0,16,8" />
-                    <CheckBox Content="Skeleton" IsChecked="{Binding EspPlayerSkeletons, Mode=TwoWay}" Margin="0,0,16,8" />
-                    <CheckBox Content="Names" IsChecked="{Binding EspPlayerNames, Mode=TwoWay}" Margin="0,0,16,8" />
-                 </WrapPanel>
+                <StackPanel>
+                     <WrapPanel>
+                        <CheckBox Content="Box" IsChecked="{Binding EspPlayerBoxes, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Skeleton" IsChecked="{Binding EspPlayerSkeletons, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Names" IsChecked="{Binding EspPlayerNames, Mode=TwoWay}" Margin="0,0,16,8" />
+                     </WrapPanel>
+                     <WrapPanel Margin="0,4,0,0">
+                        <TextBlock Text="Max Distance (0 = Unlimited):" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Slider x:Name="PlayerDistanceSlider"
+                                Width="200"
+                                Margin="0,0,8,0"
+                                Minimum="0"
+                                Maximum="500"
+                                SmallChange="10"
+                                LargeChange="50"
+                                Value="{Binding EspPlayerMaxDistance, Mode=TwoWay}"/>
+                        <TextBlock Text="{Binding Value, ElementName=PlayerDistanceSlider, StringFormat='{}{0:F0}m'}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="50"/>
+                     </WrapPanel>
+                </StackPanel>
             </GroupBox>
             
             <GroupBox Header="AI ESP" Margin="0,0,0,12">
-                 <WrapPanel>
-                    <CheckBox Content="Box" IsChecked="{Binding EspAIBoxes, Mode=TwoWay}" Margin="0,0,16,8" />
-                    <CheckBox Content="Skeleton" IsChecked="{Binding EspAISkeletons, Mode=TwoWay}" Margin="0,0,16,8" />
-                    <CheckBox Content="Names" IsChecked="{Binding EspAINames, Mode=TwoWay}" Margin="0,0,16,8" />
-                 </WrapPanel>
+                <StackPanel>
+                     <WrapPanel>
+                        <CheckBox Content="Box" IsChecked="{Binding EspAIBoxes, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Skeleton" IsChecked="{Binding EspAISkeletons, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Names" IsChecked="{Binding EspAINames, Mode=TwoWay}" Margin="0,0,16,8" />
+                     </WrapPanel>
+                     <WrapPanel Margin="0,4,0,0">
+                        <TextBlock Text="Max Distance (0 = Unlimited):" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Slider x:Name="AIDistanceSlider"
+                                Width="200"
+                                Margin="0,0,8,0"
+                                Minimum="0"
+                                Maximum="500"
+                                SmallChange="10"
+                                LargeChange="50"
+                                Value="{Binding EspAIMaxDistance, Mode=TwoWay}"/>
+                        <TextBlock Text="{Binding Value, ElementName=AIDistanceSlider, StringFormat='{}{0:F0}m'}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="50"/>
+                     </WrapPanel>
+                </StackPanel>
             </GroupBox>
             
             <GroupBox Header="Loot &amp; Exfils" Margin="0,0,0,12">
@@ -87,6 +129,13 @@
                         <CheckBox Content="Loot Cone Filter"
                                   IsChecked="{Binding EspLootConeEnabled, Mode=TwoWay}"
                                   Margin="0,0,16,8" />
+                     </WrapPanel>
+                     <WrapPanel Margin="0,4,0,0">
+                        <CheckBox Content="Show Food" IsChecked="{Binding EspFood, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Meds" IsChecked="{Binding EspMeds, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Backpacks" IsChecked="{Binding EspBackpacks, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Corpses" IsChecked="{Binding EspCorpses, Mode=TwoWay}" Margin="0,0,16,8" />
+                        <CheckBox Content="Show Containers" IsChecked="{Binding EspContainers, Mode=TwoWay}" Margin="0,0,16,8" />
                      </WrapPanel>
                      <WrapPanel Margin="0,4,0,0" IsEnabled="{Binding EspLootConeEnabled}">
                         <TextBlock Text="Cone Angle"
@@ -103,6 +152,20 @@
                                    VerticalAlignment="Center"
                                    Margin="8,0,0,0" />
                      </WrapPanel>
+                     <WrapPanel Margin="0,4,0,0">
+                        <TextBlock Text="Max Distance (0 = Unlimited):" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Slider x:Name="LootDistanceSlider"
+                                Width="200"
+                                Margin="0,0,8,0"
+                                Minimum="0"
+                                Maximum="500"
+                                SmallChange="10"
+                                LargeChange="50"
+                                Value="{Binding EspLootMaxDistance, Mode=TwoWay}"/>
+                        <TextBlock Text="{Binding Value, ElementName=LootDistanceSlider, StringFormat='{}{0:F0}m'}"
+                                   VerticalAlignment="Center"
+                                   MinWidth="50"/>
+                     </WrapPanel>
                 </StackPanel>
             </GroupBox>
 
@@ -111,19 +174,19 @@
                       Margin="0,0,0,12">
                 <StackPanel>
                     <WrapPanel Margin="0,0,0,8">
-                        <TextBlock Text="Max FPS (0 = VSync/Unlimited):"
+                        <TextBlock Text="Max FPS (0 = 144fps default):"
                                    VerticalAlignment="Center"
                                    Width="200" />
                         <TextBox Text="{Binding EspMaxFPS, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Width="80"
                                  Margin="8,0" />
-                        <TextBlock Text="Recommended: 60-144"
+                        <TextBlock Text="Recommended: 60, 144, 240, or 0"
                                    VerticalAlignment="Center"
                                    Foreground="Gray"
                                    FontSize="10"
                                    Margin="8,0" />
                     </WrapPanel>
-                    <TextBlock Text="Note: Set to 0 for VSync (monitor refresh rate)."
+                    <TextBlock Text="Note: 0 = 144 FPS. High FPS (144+) works even on 60Hz monitors. Lower values save CPU/GPU."
                                TextWrapping="Wrap"
                                Foreground="Gray"
                                FontSize="10"

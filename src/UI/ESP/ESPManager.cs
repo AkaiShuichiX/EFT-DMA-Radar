@@ -84,6 +84,15 @@ namespace LoneEftDmaRadar.UI.ESP
             _espWindow.ApplyResolutionOverride();
         }
 
+        /// <summary>
+        /// Resets camera state and forces ESP refresh. Useful when ESP appears broken.
+        /// </summary>
+        public static void ResetCamera()
+        {
+            Tarkov.GameWorld.CameraManager.Reset();
+            _espWindow?.RefreshESP();
+        }
+
         public static bool IsInitialized => _isInitialized;
     }
 }

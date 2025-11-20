@@ -1,5 +1,7 @@
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using LoneEftDmaRadar.UI.ESP;
@@ -17,12 +19,45 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             {
                 ESPManager.ToggleESP();
             });
-            
+
             StartEspCommand = new SimpleCommand(() =>
             {
                 ESPManager.StartESP();
             });
+
+            // Populate available screens
+            RefreshAvailableScreens();
         }
+
+        private void RefreshAvailableScreens()
+        {
+            AvailableScreens.Clear();
+
+            // Use WPF's SystemParameters for screen info
+            var primaryWidth = (int)SystemParameters.PrimaryScreenWidth;
+            var primaryHeight = (int)SystemParameters.PrimaryScreenHeight;
+            var virtualWidth = (int)SystemParameters.VirtualScreenWidth;
+            var virtualHeight = (int)SystemParameters.VirtualScreenHeight;
+
+            // Primary screen
+            AvailableScreens.Add(new ScreenOption
+            {
+                Index = 0,
+                DisplayName = $"Screen 1 (Primary) - {primaryWidth}x{primaryHeight}"
+            });
+
+            // If virtual screen is larger, there are additional monitors
+            if (virtualWidth > primaryWidth || virtualHeight > primaryHeight)
+            {
+                AvailableScreens.Add(new ScreenOption
+                {
+                    Index = 1,
+                    DisplayName = $"Screen 2 (Secondary) - Detect Auto"
+                });
+            }
+        }
+
+        public ObservableCollection<ScreenOption> AvailableScreens { get; } = new ObservableCollection<ScreenOption>();
 
         public ICommand ToggleEspCommand { get; }
         public ICommand StartEspCommand { get; }
@@ -171,6 +206,71 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public bool EspFood
+        {
+            get => App.Config.UI.EspFood;
+            set
+            {
+                if (App.Config.UI.EspFood != value)
+                {
+                    App.Config.UI.EspFood = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool EspMeds
+        {
+            get => App.Config.UI.EspMeds;
+            set
+            {
+                if (App.Config.UI.EspMeds != value)
+                {
+                    App.Config.UI.EspMeds = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool EspBackpacks
+        {
+            get => App.Config.UI.EspBackpacks;
+            set
+            {
+                if (App.Config.UI.EspBackpacks != value)
+                {
+                    App.Config.UI.EspBackpacks = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool EspCorpses
+        {
+            get => App.Config.UI.EspCorpses;
+            set
+            {
+                if (App.Config.UI.EspCorpses != value)
+                {
+                    App.Config.UI.EspCorpses = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public bool EspContainers
+        {
+            get => App.Config.UI.EspContainers;
+            set
+            {
+                if (App.Config.UI.EspContainers != value)
+                {
+                    App.Config.UI.EspContainers = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public bool EspExfils
         {
             get => App.Config.UI.EspExfils;
@@ -251,6 +351,45 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public float EspPlayerMaxDistance
+        {
+            get => App.Config.UI.EspPlayerMaxDistance;
+            set
+            {
+                if (Math.Abs(App.Config.UI.EspPlayerMaxDistance - value) > float.Epsilon)
+                {
+                    App.Config.UI.EspPlayerMaxDistance = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public float EspAIMaxDistance
+        {
+            get => App.Config.UI.EspAIMaxDistance;
+            set
+            {
+                if (Math.Abs(App.Config.UI.EspAIMaxDistance - value) > float.Epsilon)
+                {
+                    App.Config.UI.EspAIMaxDistance = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public float EspLootMaxDistance
+        {
+            get => App.Config.UI.EspLootMaxDistance;
+            set
+            {
+                if (Math.Abs(App.Config.UI.EspLootMaxDistance - value) > float.Epsilon)
+                {
+                    App.Config.UI.EspLootMaxDistance = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         public float FOV
         {
             get => App.Config.UI.FOV;
@@ -264,10 +403,29 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public int EspTargetScreen
+        {
+            get => App.Config.UI.EspTargetScreen;
+            set
+            {
+                if (App.Config.UI.EspTargetScreen != value)
+                {
+                    App.Config.UI.EspTargetScreen = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+    }
+
+    public class ScreenOption
+    {
+        public int Index { get; set; }
+        public string DisplayName { get; set; }
     }
 }
 

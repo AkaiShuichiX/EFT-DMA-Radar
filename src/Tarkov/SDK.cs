@@ -58,8 +58,9 @@ namespace SDK
         {
             public const uint MovementContext = 0x60; // EFT.MovementContext
             public const uint _playerBody = 0x158; // EFT.PlayerBody
-            public const uint Corpse = 0x3E0; // EFT.Interactive.Corpse
-            public const uint HandsController = 0x540; // EFT.Player.HandsController
+            public const uint ProceduralWeaponAnimation = 0x370; // EFT.Animations.ProceduralWeaponAnimation
+            public const uint Corpse = 0x640; // EFT.Interactive.Corpse
+            public const uint HandsController = 0x940; // EFT.Player.AbstractHandsController
             public const uint Location = 0x5E0; // String
             public const uint Profile = 0x8C0; // EFT.Profile
         }
@@ -71,8 +72,27 @@ namespace SDK
 
         public readonly partial struct ProceduralWeaponAnimation
         {
-            public const uint IsAiming = 0x1BD; // Boolean
+            public const uint IsAiming = 0x145; // Boolean
             public const uint _fieldOfView = 0xA8; // Float
+            public const uint _optics = 0x180; // System.Collections.Generic.List<ProceduralWeaponAnimation.SightNBone>
+        }
+
+        public readonly partial struct SightNBone
+        {
+            public const uint Mod = 0x10; // EFT.InventoryLogic.SightComponent
+        }
+
+        public readonly partial struct SightComponent
+        {
+            public const uint _template = 0x20; // EFT.InventoryLogic.ISightComponentTemplate
+            public const uint ScopesSelectedModes = 0x30; // System.Int32[]
+            public const uint SelectedScope = 0x38; // System.Int32
+            public const uint ScopeZoomValue = 0x3C; // System.Single
+        }
+
+        public readonly partial struct SightInterface
+        {
+            public const uint Zooms = 0x1B8; // System.Single[][]
         }
 
         public readonly partial struct ObservedPlayerView

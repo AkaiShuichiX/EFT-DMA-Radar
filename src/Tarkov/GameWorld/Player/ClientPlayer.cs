@@ -113,23 +113,40 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
             catch { return 0f; }
         }
 
+        public ulong PWA
+        {
+            get
+            {
+                try
+                {
+                    return Memory.ReadPtr(Base + Offsets.Player.ProceduralWeaponAnimation);
+                }
+                catch
+                {
+                    return 0;
+                }
+            }
+        }
+
         public bool IsAiming
         {
             get
             {
                 try
                 {
-                    var hands = Memory.ReadPtr(Base + Offsets.Player.HandsController);
-                    if (hands == 0) return false;
-                    
-                    // We assume it's a FirearmController if it has a valid WeaponAnimation pointer at this offset
-                    // Note: Non-firearm controllers might not have WeaponAnimation at this offset, check class or assume 0
-                    var anim = Memory.ReadPtr(hands + Offsets.FirearmController.WeaponAnimation);
-                    if (anim == 0) return false;
+                    var weaponAnim = PWA;
+                    if (weaponAnim == 0)
+                    {
+                        return false;
+                    }
 
-                    return Memory.ReadValue<bool>(anim + Offsets.ProceduralWeaponAnimation.IsAiming);
+                    bool isAiming = Memory.ReadValue<bool>(weaponAnim + Offsets.ProceduralWeaponAnimation.IsAiming);
+                    return isAiming;
                 }
-                catch { return false; }
+                catch
+                {
+                    return false;
+                }
             }
         }
 
