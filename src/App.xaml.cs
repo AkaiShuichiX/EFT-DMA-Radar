@@ -133,7 +133,7 @@ namespace LoneEftDmaRadar
                 using var loading = new LoadingWindow();
                 await ConfigureProgramAsync(loadingWindow: loading);
 
-                //DebugLogger.Toggle(); // Auto-open debug console
+                DebugLogger.Toggle(); // Auto-open debug console
 
                 MainWindow = new MainWindow();
                 MainWindow.Show();
@@ -216,10 +216,10 @@ namespace LoneEftDmaRadar
                                            EXECUTION_STATE.ES_DISPLAY_REQUIRED);
             var highPerformanceGuid = new Guid("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
             if (PowerSetActiveScheme(IntPtr.Zero, ref highPerformanceGuid) != 0)
-                Debug.WriteLine("WARNING: Unable to set High Performance Power Plan");
+                DebugLogger.LogDebug("WARNING: Unable to set High Performance Power Plan");
             const uint timerResolutionMs = 5;
             if (TimeBeginPeriod(timerResolutionMs) != 0)
-                Debug.WriteLine($"WARNING: Unable to set timer resolution to {timerResolutionMs}ms. This may cause performance issues.");
+                DebugLogger.LogDebug($"WARNING: Unable to set timer resolution to {timerResolutionMs}ms. This may cause performance issues.");
         }
 
         /// <summary>

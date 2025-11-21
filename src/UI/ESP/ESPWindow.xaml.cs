@@ -316,7 +316,7 @@ namespace LoneEftDmaRadar.UI.ESP
             }
             catch (System.Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ESP RENDER ERROR: {ex}");
+                DebugLogger.LogDebug($"ESP RENDER ERROR: {ex}");
             }
         }
 

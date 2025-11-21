@@ -1,4 +1,5 @@
 ﻿using LoneEftDmaRadar.DMA;
+using LoneEftDmaRadar.UI.Misc;
 using VmmSharpEx;
 
 namespace LoneEftDmaRadar.Tarkov.Unity.Structures
@@ -32,14 +33,14 @@ namespace LoneEftDmaRadar.Tarkov.Unity.Structures
                     uint rel = Memory.ReadValueEnsure<uint>(gomSig + 3);
                     var gomPtr = Memory.ReadValueEnsure<VmmPointer>(gomSig + 7 + rel);
                     gomPtr.ThrowIfInvalid();
-                    Debug.WriteLine("GOM Located via Signature.");
+                    DebugLogger.LogDebug("GOM Located via Signature.");
                     return gomPtr;
                 }
                 catch
                 {
                     var gomPtr = Memory.ReadValueEnsure<VmmPointer>(unityBase + UnitySDK.UnityOffsets.GameObjectManager);
                     gomPtr.ThrowIfInvalid();
-                    Debug.WriteLine("GOM Located via Hardcoded Offset.");
+                    DebugLogger.LogDebug("GOM Located via Hardcoded Offset.");
                     return gomPtr;
                 }
             }
@@ -100,7 +101,7 @@ namespace LoneEftDmaRadar.Tarkov.Unity.Structures
                 {
                     var objectNamePtr = Memory.ReadPtr(currentObject.ThisObject + UnitySDK.UnityOffsets.GameObject_NameOffset);
                     var objectNameStr = Memory.ReadUtf8String(objectNamePtr, 64);
-                    //Debug.WriteLine("GOM Object: " + objectNameStr);
+                    //DebugLogger.LogDebug("GOM Object: " + objectNameStr);
                     if (objectNameStr.Equals("GameWorld", StringComparison.OrdinalIgnoreCase))
                     {
                         try
@@ -135,15 +136,15 @@ namespace LoneEftDmaRadar.Tarkov.Unity.Structures
                             }
 
                             map = Memory.ReadUnicodeString(mapPtr, 128, false);
-                            Debug.WriteLine("Detected Map " + map);
-                            //Debug.WriteLine(currentObject.ThisObject.ToString("X"));
+                            DebugLogger.LogDebug("Detected Map " + map);
+                            //DebugLogger.LogDebug(currentObject.ThisObject.ToString("X"));
                             if (!StaticGameData.MapNames.ContainsKey(map)) // Also makes sure we're not in the hideout
                                 throw new ArgumentException("Invalid Map ID!");
                             return localGameWorld;
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"Invalid GameWorld Instance: {ex}");
+                            DebugLogger.LogDebug($"Invalid GameWorld Instance: {ex}");
                         }
                     }
 
