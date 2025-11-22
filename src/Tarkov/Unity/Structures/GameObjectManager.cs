@@ -30,8 +30,8 @@ namespace LoneEftDmaRadar.Tarkov.Unity.Structures
                     const string signature = "48 89 05 ?? ?? ?? ?? 48 83 C4 ?? C3 33 C9";
                     ulong gomSig = Memory.FindSignature(signature);
                     gomSig.ThrowIfInvalidVirtualAddress(nameof(gomSig));
-                    uint rel = Memory.ReadValueEnsure<uint>(gomSig + 3);
-                    var gomPtr = Memory.ReadValueEnsure<VmmPointer>(gomSig + 7 + rel);
+                    int rva = Memory.ReadValueEnsure<int>(gomSig + 3);
+                    var gomPtr = Memory.ReadValueEnsure<VmmPointer>(gomSig.AddRVA(7, rva));
                     gomPtr.ThrowIfInvalid();
                     DebugLogger.LogDebug("GOM Located via Signature.");
                     return gomPtr;
@@ -87,71 +87,6 @@ namespace LoneEftDmaRadar.Tarkov.Unity.Structures
                 }
             }
             return 0x0;
-        }
-
-        public ulong GetGameWorld(out string map)
-        {
-            map = default;
-            var currentObject = Memory.ReadValue<LinkedListObject>(ActiveNodes);
-            var lastObject = Memory.ReadValue<LinkedListObject>(LastActiveNode);
-
-            if (currentObject.ThisObject != 0x0)
-            {
-                while (currentObject.ThisObject != 0x0 && currentObject.ThisObject != lastObject.ThisObject)
-                {
-                    var objectNamePtr = Memory.ReadPtr(currentObject.ThisObject + UnitySDK.UnityOffsets.GameObject_NameOffset);
-                    var objectNameStr = Memory.ReadUtf8String(objectNamePtr, 64);
-                    //DebugLogger.LogDebug("GOM Object: " + objectNameStr);
-                    if (objectNameStr.Equals("GameWorld", StringComparison.OrdinalIgnoreCase))
-                    {
-                        try
-                        {
-                            // Try reading GameWorldChain
-                            ulong localGameWorld = 0x0;
-                            try
-                            {
-                                localGameWorld = Memory.ReadPtrChain(currentObject.ThisObject, false, UnitySDK.UnityOffsets.GameWorldChain);
-                            }
-                            catch
-                            {
-                                // Fallback or ignore if chain fails
-                            }
-
-                            if (localGameWorld == 0x0)
-                            {
-                                // If chain failed, maybe it's directly on the object or different structure in new version?
-                                // For now, let's assume the standard chain is correct but maybe the object name changed or we need to be more robust.
-                                // Let's try reading just the component at 0x10 first? 
-                                // actually UnitySDK.UnityOffsets.GameWorldChain is usually { 0x10, 0x30, 0x30 } or similar.
-                                // If we fail here, we just continue loop.
-                                throw new Exception("Failed to resolve LocalGameWorld from GameWorld object.");
-                            }
-
-                            /// Get Selected Map
-                            var mapPtr = Memory.ReadValue<ulong>(localGameWorld + Offsets.GameWorld.Location, false);
-                            if (mapPtr == 0x0) // Offline Mode
-                            {
-                                var localPlayer = Memory.ReadPtr(localGameWorld + Offsets.ClientLocalGameWorld.MainPlayer, false);
-                                mapPtr = Memory.ReadPtr(localPlayer + Offsets.Player.Location, false);
-                            }
-
-                            map = Memory.ReadUnicodeString(mapPtr, 128, false);
-                            DebugLogger.LogDebug("Detected Map " + map);
-                            //DebugLogger.LogDebug(currentObject.ThisObject.ToString("X"));
-                            if (!StaticGameData.MapNames.ContainsKey(map)) // Also makes sure we're not in the hideout
-                                throw new ArgumentException("Invalid Map ID!");
-                            return localGameWorld;
-                        }
-                        catch (Exception ex)
-                        {
-                            DebugLogger.LogDebug($"Invalid GameWorld Instance: {ex}");
-                        }
-                    }
-
-                    currentObject = Memory.ReadValue<LinkedListObject>(currentObject.NextObjectLink); // Read next object
-                }
-            }
-            throw new InvalidOperationException("GameWorld not found.");
         }
     }
 }

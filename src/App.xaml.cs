@@ -102,17 +102,7 @@ namespace LoneEftDmaRadar
                 VelopackApp.Build().Run();
                 _mutex = new Mutex(true, MUTEX_ID, out bool singleton);
                 if (!singleton)
-                {
-                    _mutex.Dispose();
-                    var thisProc = Process.GetCurrentProcess();
-                    foreach (var proc in 
-                        Process.GetProcessesByName(thisProc.ProcessName)
-                        .Where(p => p.Id != thisProc.Id))
-                    {
-                        proc.Kill(); // Kill any zombies
-                    }
-                    Environment.FailFast("Another instance is already running. Please restart the application.");
-                }
+                    throw new InvalidOperationException("The application is already running.");
                 Config = EftDmaConfig.Load();
                 ServiceProvider = BuildServiceProvider();
                 HttpClientFactory = ServiceProvider.GetRequiredService<IHttpClientFactory>();
@@ -133,7 +123,7 @@ namespace LoneEftDmaRadar
                 using var loading = new LoadingWindow();
                 await ConfigureProgramAsync(loadingWindow: loading);
 
-                DebugLogger.Toggle(); // Auto-open debug console
+                //DebugLogger.Toggle(); // Auto-open debug console
 
                 MainWindow = new MainWindow();
                 MainWindow.Show();
