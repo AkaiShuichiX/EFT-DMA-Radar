@@ -218,6 +218,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// </summary>
         public ConcurrentDictionary<Bones, UnityTransform> PlayerBones { get; } = new();
         protected int _verticesCount;
+        private bool _skeletonErrorLogged;
 
         /// <summary>
         /// TRUE if critical memory reads (position/rotation) have failed.
@@ -498,12 +499,24 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                                 {
                                     bone.UpdatePosition(vertices.Span);
                                 }
+                                _skeletonErrorLogged = false;
+                            }
+                            catch (ArgumentOutOfRangeException ex)
+                            {
+                                if (!_skeletonErrorLogged)
+                                {
+                                    DebugLogger.LogDebug($"Skipping skeleton update for Player '{Name ?? "Unknown"}': {ex.Message}");
+                                    _skeletonErrorLogged = true;
+                                }
+                                successPos = false;
+                                return;
                             }
                             catch (Exception ex) // Attempt to re-allocate Transform on error
                             {
                                 DebugLogger.LogDebug($"ERROR getting Player '{Name}' SkeletonRoot Position: {ex}");
                                 var transform = new UnityTransform(SkeletonRoot.TransformInternal);
                                 SkeletonRoot = transform;
+                                successPos = false;
                             }
                         }
                         catch
@@ -885,7 +898,12 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                 case PlayerType.Teammate:
                     return new ValueTuple<SKPaint, SKPaint>(SKPaints.PaintTeammate, SKPaints.TextTeammate);
                 case PlayerType.PMC:
-                    return new ValueTuple<SKPaint, SKPaint>(SKPaints.PaintPMC, SKPaints.TextPMC);
+                    return PlayerSide switch
+                    {
+                        Enums.EPlayerSide.Bear => new ValueTuple<SKPaint, SKPaint>(SKPaints.PaintPMCBear, SKPaints.TextPMCBear),
+                        Enums.EPlayerSide.Usec => new ValueTuple<SKPaint, SKPaint>(SKPaints.PaintPMCUsec, SKPaints.TextPMCUsec),
+                        _ => new ValueTuple<SKPaint, SKPaint>(SKPaints.PaintPMC, SKPaints.TextPMC)
+                    };
                 case PlayerType.AIScav:
                     return new ValueTuple<SKPaint, SKPaint>(SKPaints.PaintScav, SKPaints.TextScav);
                 case PlayerType.AIRaider:
