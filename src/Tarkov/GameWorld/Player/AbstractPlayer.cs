@@ -173,7 +173,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// <summary>
         /// True if the Player is Active (in the player list).
         /// </summary>
-        public bool IsActive { get; private set; }
+        public bool IsActive { get; private set; } = true;
 
         /// <summary>
         /// Type of player unit.
@@ -224,6 +224,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         public PlayerSkeleton Skeleton { get; protected set; }
         protected int _verticesCount;
         private bool _skeletonErrorLogged;
+        private int _transformFailureCount;
 
         /// <summary>
         /// TRUE if critical memory reads (position/rotation) have failed.
@@ -518,22 +519,34 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                                     }
                                     _verticesCount = 0; // force re-request next loop
                                     successPos = false;
+                                    _transformFailureCount++;
                                     return;
                                 }
 
                                 _verticesCount = available;
 
-                                _ = SkeletonRoot.UpdatePosition(vertices.Span);
-                                foreach (var bone in PlayerBones.Values)
+                                // Validate position before updating
+                                var newPos = SkeletonRoot.UpdatePosition(vertices.Span);
+                                if (newPos == Vector3.Zero || float.IsNaN(newPos.X) || float.IsInfinity(newPos.X))
                                 {
-                                    bone.UpdatePosition(vertices.Span);
+                                    // Invalid position - don't update bones, keep previous position
+                                    successPos = false;
+                                    _transformFailureCount++;
                                 }
-                                _skeletonErrorLogged = false;
-
-                                // Re-enable player after successful position update (in case it was disabled due to errors)
-                                if (!IsActive && IsAlive)
+                                else
                                 {
-                                    IsActive = true;
+                                    foreach (var bone in PlayerBones.Values)
+                                    {
+                                        bone.UpdatePosition(vertices.Span);
+                                    }
+                                    _skeletonErrorLogged = false;
+                                    _transformFailureCount = 0; // Reset on success
+
+                                    // Re-enable player after successful position update (in case it was disabled due to errors)
+                                    if (!IsActive && IsAlive)
+                                    {
+                                        IsActive = true;
+                                    }
                                 }
                             }
                             catch (ArgumentOutOfRangeException ex)
@@ -544,6 +557,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                                     _skeletonErrorLogged = true;
                                 }
                                 successPos = false;
+                                _transformFailureCount++;
                                 return;
                             }
                             catch (Exception ex) // Attempt to re-allocate Transform on error
@@ -553,6 +567,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                                     DebugLogger.LogDebug($"ERROR getting Player '{Name}' SkeletonRoot Position: {ex}");
                                     _skeletonErrorLogged = true;
                                 }
+                                _transformFailureCount++;
                                 try
                                 {
                                     var transform = new UnityTransform(SkeletonRoot.TransformInternal);
@@ -560,9 +575,12 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                                 }
                                 catch
                                 {
-                                    // If transform re-allocation also fails, we have stale data
-                                    // Mark as inactive to prevent rendering until next successful update
-                                    IsActive = false;
+                                    // Only mark as inactive after multiple consecutive failures
+                                    // This prevents flickering when players have temporary read failures
+                                    if (_transformFailureCount > 10)
+                                    {
+                                        IsActive = false;
+                                    }
                                 }
                                 successPos = false;
                             }
@@ -570,6 +588,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                         catch
                         {
                             successPos = false;
+                            _transformFailureCount++;
                         }
                     }
                 }
@@ -1101,17 +1120,28 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
         /// Get Bone Position (if available).
         /// </summary>
         /// <param name="bone">Bone Index.</param>
-        /// <returns>World Position of Bone.</returns>
+        /// <returns>World Position of Bone, or SkeletonRoot position as fallback.</returns>
         public Vector3 GetBonePos(Bones bone)
         {
             try
             {
                 if (PlayerBones.TryGetValue(bone, out var boneTransform))
-                    return boneTransform.Position;
+                {
+                    var pos = boneTransform.Position;
+                    // Validate the position is reasonable (not zero, not NaN/Infinity)
+                    if (pos != Vector3.Zero && !float.IsNaN(pos.X) && !float.IsInfinity(pos.X))
+                        return pos;
+                }
             }
             catch { }
 
-            return Vector3.Zero;
+            // Fallback to skeleton root position instead of zero
+            // This prevents players from "teleporting" to the origin
+            var rootPos = SkeletonRoot?.Position ?? Vector3.Zero;
+            if (rootPos != Vector3.Zero && !float.IsNaN(rootPos.X) && !float.IsInfinity(rootPos.X))
+                return rootPos;
+
+            return Position; // Ultimate fallback to cached position
         }
 
         #endregion
