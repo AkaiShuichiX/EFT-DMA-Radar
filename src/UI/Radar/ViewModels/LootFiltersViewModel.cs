@@ -58,7 +58,7 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             DeleteFilterCommand = new SimpleCommand(OnDeleteFilter);
 
             AddEntryCommand = new SimpleCommand(OnAddEntry);
-            RemoveEntryCommand = new SimpleCommand(o => OnRemoveEntry(o));
+            RemoveEntryCommand = new SimpleCommand(OnRemoveEntry);
 
             if (FilterNames.Any())
                 SelectedFilterName = App.Config.LootFilters.Selected;
