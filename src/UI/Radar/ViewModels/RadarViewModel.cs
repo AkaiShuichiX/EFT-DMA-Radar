@@ -233,7 +233,7 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             var inRaid = InRaid;
             var canvas = e.Surface.Canvas;
             // FPS cap for radar rendering to free headroom for ESP.
-            int maxFps = App.Config.UI.RadarMaxFPS;
+            int maxFps = 45;
             if (maxFps > 0)
             {
                 long now = Stopwatch.GetTimestamp();
