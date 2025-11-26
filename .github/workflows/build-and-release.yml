@@ -68,8 +68,9 @@ jobs:
 
       - name: Set VERSION env
         run: |
-          $version = '${{ steps.next_tag.outputs.result }}'
-          Write-Host "Resolved version: $version"
+          $raw = '${{ steps.next_tag.outputs.result }}'
+          $version = $raw.Trim('"')
+          Write-Host "Raw version: $raw -> Using: $version"
           Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
         shell: pwsh
 
