@@ -247,7 +247,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                 if (MainWindow.Instance?.PlayerWatchlist?.ViewModel is PlayerWatchlistViewModel vm &&
                     vm.Watchlist.TryGetValue(AccountID, out var watchlistEntry)) // player is on watchlist
                 {
-                    Type = PlayerType.SpecialPlayer; // Flag watchlist player
+                    Type = watchlistEntry.Streamer ? PlayerType.Streamer : PlayerType.SpecialPlayer; // Flag watchlist player
                     UpdateAlerts($"[Watchlist] {watchlistEntry.Reason} @ {watchlistEntry.Timestamp}");
                 }
             }

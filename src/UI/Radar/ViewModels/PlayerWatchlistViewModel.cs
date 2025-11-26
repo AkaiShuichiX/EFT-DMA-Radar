@@ -175,6 +175,16 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             Entries.CollectionChanged += Entries_CollectionChanged;
             RefreshRaidPlayersCommand = new SimpleCommand(RefreshRaidPlayers);
             AddSelectedRaidPlayerCommand = new SimpleCommand(AddSelectedRaidPlayer);
+
+            // Normalize existing entries: set Streamer=true if Reason mentions Twitch/Youtube/YT
+            foreach (var e in Entries.ToList())
+            {
+                var r = e.Reason?.ToLowerInvariant() ?? string.Empty;
+                if (!e.Streamer && (r.Contains("twitch") || r.Contains("youtube") || r.Contains("yt")))
+                {
+                    e.Streamer = true;
+                }
+            }
         }
     }
 }
