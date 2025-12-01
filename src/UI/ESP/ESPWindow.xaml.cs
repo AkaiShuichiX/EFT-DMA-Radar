@@ -425,10 +425,6 @@ namespace LoneEftDmaRadar.UI.ESP
                          inCone = screenAngle <= App.Config.UI.EspLootConeAngle;
                      }
 
-                     // Calculate distance-based scale factor with steeper falloff
-                     // Scale reference: 1.0 at 25m, 0.3 at 100m, 2.0 at 10m
-                     float distanceScale = Math.Clamp(25f / Math.Max(distance, 3f), 0.2f, 2.5f);
-
                      // Determine colors - prioritize custom filter color if set
                      DxColor circleColor;
                      DxColor textColor;
@@ -482,10 +478,9 @@ namespace LoneEftDmaRadar.UI.ESP
                          textColor = circleColor;
                      }
 
-                     // Scale marker radius with distance - smaller base radius
-                     float baseRadius = 2.5f;
-                     float scaledRadius = Math.Clamp(baseRadius * distanceScale, 1f, 6f);
-                     ctx.DrawCircle(ToRaw(screen), scaledRadius, circleColor, true);
+                     // Fixed radius - scales automatically with zoom through WorldToScreen projection
+                     float radius = 3f;
+                     ctx.DrawCircle(ToRaw(screen), radius, circleColor, true);
 
                      if (item.Important || inCone)
                      {
@@ -510,16 +505,8 @@ namespace LoneEftDmaRadar.UI.ESP
                          // Add distance to all items
                          text = $"{text} D:{distance:F0}m";
 
-                         // Scale text size with distance
-                         DxTextSize textSize;
-                         if (distanceScale > 1.5f)
-                             textSize = DxTextSize.Medium;
-                         else if (distanceScale > 0.8f)
-                             textSize = DxTextSize.Small;
-                         else
-                             textSize = DxTextSize.Small; // Could add XSmall if needed
-
-                         ctx.DrawText(text, screen.X + scaledRadius + 4, screen.Y + 4, textColor, textSize);
+                         // Fixed text size - scales automatically with zoom
+                         ctx.DrawText(text, screen.X + radius + 4, screen.Y + 4, textColor, DxTextSize.Small);
                     }
                 }
             }

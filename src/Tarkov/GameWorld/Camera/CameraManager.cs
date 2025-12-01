@@ -31,7 +31,9 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         private static void MemDMA_ProcessStarting(object sender, EventArgs e) { }
         private static void MemDMA_ProcessStopped(object sender, EventArgs e) { }
         private static float _zoomLevel = 1.0f;
-        private static float ZoomLevel => _zoomLevel;        
+        private static float _scopeMagnification = 1.0f; // Scope zoom magnification
+        private static float ZoomLevel => _zoomLevel;
+        public static float ScopeMagnification => _scopeMagnification;
         public static ulong FPSCameraPtr { get; private set; }
         public static ulong OpticCameraPtr { get; private set; }
         public static ulong ActiveCameraPtr { get; private set; }
@@ -64,6 +66,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             _fov = 0f;
             _aspect = 0f;
             _cameraWorldPosition = Vector3.Zero;
+            _scopeMagnification = 1.0f;
             IsInitialized = false;
         }
         public ulong FPSCamera { get; }
@@ -119,34 +122,34 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
         {
             try
             {
-                float w = Vector3.Dot(_viewMatrix.Translation, worldPos) + _viewMatrix.M44;
+                // Transform world position to view space using ViewMatrix
+                float x = Vector3.Dot(_viewMatrix.Right, worldPos) + _viewMatrix.M14;
+                float y = Vector3.Dot(_viewMatrix.Up, worldPos) + _viewMatrix.M24;
+                float z = Vector3.Dot(_viewMatrix.Translation, worldPos) + _viewMatrix.M44;
 
-                if (w < 0.098f)
+                // Check if behind camera
+                if (z < 0.098f)
                 {
                     scrPos = default;
                     return false;
                 }
 
-                float x = Vector3.Dot(_viewMatrix.Right, worldPos) + _viewMatrix.M14;
-                float y = Vector3.Dot(_viewMatrix.Up, worldPos) + _viewMatrix.M24;
+                // Convert FOV from degrees to radians and get half angle
+                float fovRad = _fov * (MathF.PI / 180f);
+                float halfFovTan = MathF.Tan(fovRad * 0.5f);
+                
+                // Perspective divide and FOV scaling
+                // This maps view space coords to normalized device coordinates [-1, 1]
+                float ndcX = x / (z * halfFovTan * _aspect);
+                float ndcY = y / (z * halfFovTan);
 
-                // ✅ FIX: Only use FOV-based calculation when scoped, ignore zoom level
-                if (IsScoped)
-                {
-                    float angleRadHalf = (MathF.PI / 180f) * _fov * 0.5f;
-                    float angleCtg = MathF.Cos(angleRadHalf) / MathF.Sin(angleRadHalf);
-
-                    x /= angleCtg * _aspect * 0.5f;
-                    y /= angleCtg * 0.5f;
-                    
-                    // DON'T multiply by _zoomLevel - FOV already handles zoom!
-                }
-
+                // Transform from NDC to screen space
+                // NDC range [-1, 1] maps to [0, viewport]
                 var center = ViewportCenter;
                 scrPos = new()
                 {
-                    X = center.X * (1f + x / w),
-                    Y = center.Y * (1f - y / w)
+                    X = center.X * (1f + ndcX),
+                    Y = center.Y * (1f - ndcY)  // Flip Y because screen coords are top-down
                 };
 
                 if (onScreenCheck)
@@ -169,6 +172,68 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             {
                 DebugLogger.LogDebug($"ERROR in WorldToScreen: {ex}");
                 scrPos = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// WorldToScreen with depth output for scale calculations.
+        /// </summary>
+        public static bool WorldToScreen(ref readonly Vector3 worldPos, out SKPoint scrPos, out float viewDepth, bool onScreenCheck = false, bool useTolerance = false)
+        {
+            try
+            {
+                // Transform world position to view space using ViewMatrix
+                float x = Vector3.Dot(_viewMatrix.Right, worldPos) + _viewMatrix.M14;
+                float y = Vector3.Dot(_viewMatrix.Up, worldPos) + _viewMatrix.M24;
+                float z = Vector3.Dot(_viewMatrix.Translation, worldPos) + _viewMatrix.M44;
+
+                viewDepth = z; // Output the view-space depth
+
+                // Check if behind camera
+                if (z < 0.098f)
+                {
+                    scrPos = default;
+                    return false;
+                }
+
+                // Convert FOV from degrees to radians and get half angle
+                float fovRad = _fov * (MathF.PI / 180f);
+                float halfFovTan = MathF.Tan(fovRad * 0.5f);
+                
+                // Perspective divide and FOV scaling
+                float ndcX = x / (z * halfFovTan * _aspect);
+                float ndcY = y / (z * halfFovTan);
+
+                // Transform from NDC to screen space
+                var center = ViewportCenter;
+                scrPos = new()
+                {
+                    X = center.X * (1f + ndcX),
+                    Y = center.Y * (1f - ndcY)
+                };
+
+                if (onScreenCheck)
+                {
+                    int left = useTolerance ? Viewport.Left - VIEWPORT_TOLERANCE : Viewport.Left;
+                    int right = useTolerance ? Viewport.Right + VIEWPORT_TOLERANCE : Viewport.Right;
+                    int top = useTolerance ? Viewport.Top - VIEWPORT_TOLERANCE : Viewport.Top;
+                    int bottom = useTolerance ? Viewport.Bottom + VIEWPORT_TOLERANCE : Viewport.Bottom;
+
+                    if (scrPos.X < left || scrPos.X > right || scrPos.Y < top || scrPos.Y > bottom)
+                    {
+                        scrPos = default;
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogDebug($"ERROR in WorldToScreen: {ex}");
+                scrPos = default;
+                viewDepth = 0f;
                 return false;
             }
         }
@@ -461,21 +526,30 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                 IsADS = localPlayer?.CheckIfADS() ?? false;
                 IsScoped = IsADS && CheckIfScoped(localPlayer);
 
+                // Reset magnification if not scoped
+                if (!IsScoped)
+                {
+                    _scopeMagnification = 1.0f;
+                }
+
                 if (IsADS != _lastADSState || IsScoped != _lastScopedState)
                 {
-                    DebugLogger.LogInfo($"CameraManager: State Changed - IsADS={IsADS}, IsScoped={IsScoped}, OpticCamera={(OpticCamera != 0 ? "Available" : "NOT FOUND")}");
+                    DebugLogger.LogInfo($"CameraManager: State Changed - IsADS={IsADS}, IsScoped={IsScoped}, Magnification={_scopeMagnification:F2}x");
                     _lastADSState = IsADS;
                     _lastScopedState = IsScoped;
                 }
 
-                ulong activeMatrixAddress = (IsADS && IsScoped) ? _opticMatrixAddress : _fpsMatrixAddress;
-                ulong activeCamera = (IsADS && IsScoped) ? OpticCamera : FPSCamera;
+                // ALWAYS use FPS Camera matrix for projection
+                ulong activeMatrixAddress = _fpsMatrixAddress;
+                ulong activeCamera = FPSCamera;
                 ActiveCameraPtr = activeCamera;
 
                 // Prepare reads for ViewMatrix and FOV/Aspect
                 scatter.PrepareReadValue<Matrix4x4>(activeMatrixAddress + UnitySDK.UnityOffsets.Camera_ViewMatrixOffset);
                 
-                if (IsScoped)
+                // When scoped, read FOV from OpticCamera (which has the zoomed FOV)
+                // Otherwise read from FPS Camera
+                if (IsScoped && OpticCamera != 0)
                 {
                     scatter.PrepareReadValue<float>(OpticCamera + UnitySDK.UnityOffsets.Camera_FOVOffset);
                     scatter.PrepareReadValue<float>(OpticCamera + UnitySDK.UnityOffsets.Camera_AspectRatioOffset);
@@ -485,6 +559,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                     scatter.PrepareReadValue<float>(FPSCamera + UnitySDK.UnityOffsets.Camera_FOVOffset);
                     scatter.PrepareReadValue<float>(FPSCamera + UnitySDK.UnityOffsets.Camera_AspectRatioOffset);
                 }
+                
                 scatter.PrepareReadValue<float>(activeCamera + UnitySDK.UnityOffsets.Camera_ZoomLevelOffset);
                 
                 // Prepare Transform chain reads for camera position
@@ -572,15 +647,13 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                             _cameraWorldPosition = new Vector3(_viewMatrix.M14, _viewMatrix.M24, _viewMatrix.Translation.Z);
                         }
 
-                        if (IsScoped)
+                        // Read FOV from the appropriate camera
+                        if (IsScoped && OpticCamera != 0)
                         {
                             if (s.ReadValue<float>(OpticCamera + UnitySDK.UnityOffsets.Camera_FOVOffset, out var fov))
                                 _fov = fov;
                             if (s.ReadValue<float>(OpticCamera + UnitySDK.UnityOffsets.Camera_AspectRatioOffset, out var aspect))
                                 _aspect = aspect;
-                            _updateCounter++;
-                            if (_updateCounter % 300 == 0)
-                                DebugLogger.LogDebug($"CameraManager: SCOPED (PiP) - Using OpticCamera, FOV={_fov:F2}, Aspect={_aspect:F3}, CamPos={_cameraWorldPosition}");
                         }
                         else
                         {
@@ -588,9 +661,23 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
                                 _fov = fov;
                             if (s.ReadValue<float>(FPSCamera + UnitySDK.UnityOffsets.Camera_AspectRatioOffset, out var aspect))
                                 _aspect = aspect;
-                            _updateCounter++;
-                            if (_updateCounter % 300 == 0 && IsADS)
-                                DebugLogger.LogDebug($"CameraManager: ADS (non-scoped) - Using FPS Camera, CamPos={_cameraWorldPosition}");
+                        }
+                        
+                        _updateCounter++;
+                        if (_updateCounter % 100 == 0)
+                        {
+                            if (IsScoped)
+                            {
+                                DebugLogger.LogDebug($"CameraManager: SCOPED - FOV={_fov:F2}°, Magnification={_scopeMagnification:F2}x, Aspect={_aspect:F3}");
+                            }
+                            else if (IsADS)
+                            {
+                                DebugLogger.LogDebug($"CameraManager: ADS (non-scoped) - FOV={_fov:F2}°");
+                            }
+                            else
+                            {
+                                DebugLogger.LogDebug($"CameraManager: Normal - FOV={_fov:F2}°");
+                            }
                         }
 
                         if (s.ReadValue<float>(activeCamera + UnitySDK.UnityOffsets.Camera_ZoomLevelOffset, out var zoom))
@@ -614,42 +701,87 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Camera
             {
                 if (localPlayer is null)
                 {
-                    DebugLogger.LogDebug("CheckIfScoped: localPlayer is null");
+                    _scopeMagnification = 1.0f;
                     return false;
                 }
                 if (!OpticCameraActive)
                 {
-                    DebugLogger.LogDebug($"CheckIfScoped: OpticCameraActive is false (OpticCamera=0x{OpticCamera:X})");
+                    _scopeMagnification = 1.0f;
                     return false;
                 }
 
-                var opticsPtr = Memory.ReadPtr(localPlayer.PWA + Offsets.ProceduralWeaponAnimation._optics);
-                DebugLogger.LogDebug($"CheckIfScoped: opticsPtr=0x{opticsPtr:X}");
+                var pwa = localPlayer.PWA;
+                if (pwa == 0)
+                {
+                    _scopeMagnification = 1.0f;
+                    return false;
+                }
+
+                var opticsPtr = Memory.ReadPtr(pwa + Offsets.ProceduralWeaponAnimation._optics, false);
+                if (opticsPtr == 0)
+                {
+                    _scopeMagnification = 1.0f;
+                    return false;
+                }
+
                 using var optics = UnityList<VmmPointer>.Create(opticsPtr, true);
+                
                 DebugLogger.LogDebug($"CheckIfScoped: optics.Count={optics.Count}");
+                
                 if (optics.Count > 0)
                 {
-                    var pSightComponent = Memory.ReadPtr(optics[0] + Offsets.SightNBone.Mod);
-                    DebugLogger.LogDebug($"CheckIfScoped: pSightComponent=0x{pSightComponent:X}");
-                    var sightComponent = Memory.ReadValue<SightComponent>(pSightComponent);
-                    DebugLogger.LogDebug($"CheckIfScoped: ScopeZoomValue={sightComponent.ScopeZoomValue:F2}");
-                    if (sightComponent.ScopeZoomValue != 0f)
+                    var sightNBonePtr = optics[0];
+                    DebugLogger.LogDebug($"CheckIfScoped: sightNBonePtr=0x{sightNBonePtr:X}");
+                    
+                    if (sightNBonePtr == 0)
                     {
-                        bool result = sightComponent.ScopeZoomValue > 1f; // threshold adjusted (>1f)
-                        DebugLogger.LogDebug($"CheckIfScoped: Using ScopeZoomValue, result={result}");
-                        return result;
+                        _scopeMagnification = 1.0f;
+                        return false;
                     }
+
+                    var pSightComponent = Memory.ReadPtr(sightNBonePtr + Offsets.SightNBone.Mod, false);
+                    DebugLogger.LogDebug($"CheckIfScoped: pSightComponent=0x{pSightComponent:X}");
+                    
+                    if (pSightComponent == 0)
+                    {
+                        _scopeMagnification = 1.0f;
+                        return false;
+                    }
+
+                    var sightComponent = Memory.ReadValue<SightComponent>(pSightComponent, false);
+                    
+                    DebugLogger.LogDebug($"CheckIfScoped: RAW ScopeZoomValue={sightComponent.ScopeZoomValue:F4}");
+                    
+                    // Try to get zoom level from ScopeZoomValue first
+                    if (sightComponent.ScopeZoomValue > 1.01f)
+                    {
+                        _scopeMagnification = sightComponent.ScopeZoomValue;
+                        DebugLogger.LogDebug($"CheckIfScoped: ✓ Using ScopeZoomValue={_scopeMagnification:F2}x");
+                        return true;
+                    }
+                    
+                    // Fallback to GetZoomLevel()
                     float zoomLevel = sightComponent.GetZoomLevel();
-                    bool zoomResult = zoomLevel > 1f;
-                    DebugLogger.LogDebug($"CheckIfScoped: GetZoomLevel()={zoomLevel:F2}, result={zoomResult}");
-                    return zoomResult;
+                    DebugLogger.LogDebug($"CheckIfScoped: RAW GetZoomLevel()={zoomLevel:F4}");
+                    
+                    if (zoomLevel > 1.01f && zoomLevel < 100f)
+                    {
+                        _scopeMagnification = zoomLevel;
+                        DebugLogger.LogDebug($"CheckIfScoped: ✓ Using GetZoomLevel()={_scopeMagnification:F2}x");
+                        return true;
+                    }
+                    
+                    // Red dot or 1x sight
+                    DebugLogger.LogDebug($"CheckIfScoped: ✗ 1x sight detected (both values < 1.01)");
                 }
-                DebugLogger.LogDebug("CheckIfScoped: No optics found, returning false");
+                
+                _scopeMagnification = 1.0f;
                 return false;
             }
             catch (Exception ex)
             {
                 DebugLogger.LogDebug($"CheckIfScoped() ERROR: {ex}");
+                _scopeMagnification = 1.0f;
                 return false;
             }
         }
