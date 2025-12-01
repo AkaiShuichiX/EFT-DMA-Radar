@@ -12,7 +12,7 @@ using System.Collections.Concurrent;
 using System.Windows.Input;
 using System.Windows.Threading;
 using LoneEftDmaRadar.UI.Skia;
-using LoneEeftDmaRadar.UI.Misc;
+using LoneEftDmaRadar.UI.Misc;
 using LoneEftDmaRadar.DMA;
 using SharpDX;
 using SharpDX.Mathematics.Interop;
@@ -605,7 +605,7 @@ namespace LoneEftDmaRadar.UI.ESP
                         continue;
 
                     if (!WorldToScreen2WithScale(grenade.Position, out var screen, out float scale, screenWidth, screenHeight))
-                        continue;
+                        return;
 
                     // Scale with depth+zoom (like bones and loot)
                     float radius = Math.Clamp(3f * scale, 1.5f, 12f);
