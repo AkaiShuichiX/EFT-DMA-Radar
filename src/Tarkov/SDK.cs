@@ -59,7 +59,7 @@ namespace SDK
             public const uint _playerBody = 0x190; // EFT.PlayerBody
             public const uint Physical = 0x8F0; // -.\uE399 <Physical> Physical
             public const uint Corpse = 0x670; // EFT.Interactive.Corpse
-            public const uint Location = 0x860; // String
+            public const uint Location = 0x868; // String - UPDATED from 0x860
             public const uint Profile = 0x8D8; // EFT.Profile
             public const uint ProceduralWeaponAnimation = 0x330; // EFT.Animations.ProceduralWeaponAnimation
             public const uint _inventoryController = 0x950; // EFT.PlayerInventoryController update
