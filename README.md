@@ -15,13 +15,25 @@ This app has been tested on 🪟 Windows 11 25H2 (Game) and 🪟 Windows 11 23H2
 
 ## Features ✨
 
+- Configurable Aimview widget
+- Loot Info widget
 - 🛰️ ESP Fuser DX9 overlay
+   - ESP has issues, especially when ADS and using optics. Work in progress 🛠
 - 🎯 Device Aimbot / Kmbox integration
 - 🕵️‍♂️ Silent aim (memory aim)
 - 💪 No recoil, no sway, and infinite stamina
 - 🧼 Clean UI
 
+## Config File 📄
+
+This Chair creates it's own Config folder to be distinguishable from other config folders.
+- File location: C:\User\AppData\Roaming\Lum0s-EFT-DMA
+- File name: Config-EFT.json
+- Don't have a file with pre set Lootfilters and Watchlist? There's one in Master
+
 ##  Common Issues ⚠️
+
+### ESP has issues, especially when ADS and using optics. Work in progress 🛠
 
 ### DX Overlay/D3DX Errors ("DX overlay init failed", "ESP DX init failed: System.DllNotFoundException: Unable to load DLL 'd3dx943.dll'...")
 
