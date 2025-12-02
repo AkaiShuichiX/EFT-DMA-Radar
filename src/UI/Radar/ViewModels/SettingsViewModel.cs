@@ -497,6 +497,32 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public float AimviewLootRenderDistance
+        {
+            get => App.Config.UI.AimviewLootRenderDistance;
+            set
+            {
+                if (Math.Abs(App.Config.UI.AimviewLootRenderDistance - value) > float.Epsilon)
+                {
+                    App.Config.UI.AimviewLootRenderDistance = value;
+                    OnPropertyChanged(nameof(AimviewLootRenderDistance));
+                }
+            }
+        }
+
+        public bool AimviewLootRenderDistanceMax
+        {
+            get => App.Config.UI.AimviewLootRenderDistanceMax;
+            set
+            {
+                if (App.Config.UI.AimviewLootRenderDistanceMax != value)
+                {
+                    App.Config.UI.AimviewLootRenderDistanceMax = value;
+                    OnPropertyChanged(nameof(AimviewLootRenderDistanceMax));
+                }
+            }
+        }
+
         #endregion
 
     }

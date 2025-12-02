@@ -859,6 +859,18 @@ namespace LoneEftDmaRadar
         public float EspLootMaxDistance { get; set; } = 0f;
 
         /// <summary>
+        /// Maximum distance to render loot in Aimview (in meters).
+        /// </summary>
+        [JsonPropertyName("aimviewLootRenderDistance")]
+        public float AimviewLootRenderDistance { get; set; } = 25f;
+
+        /// <summary>
+        /// If true, Aimview loot render distance is unlimited (max).
+        /// </summary>
+        [JsonPropertyName("aimviewLootRenderDistanceMax")]
+        public bool AimviewLootRenderDistanceMax { get; set; } = false;
+
+        /// <summary>
         /// Target screen index for ESP window (0 = Primary, 1+ = Secondary screens).
         /// </summary>
         [JsonPropertyName("espTargetScreen")]

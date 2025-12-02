@@ -287,7 +287,10 @@ namespace LoneEftDmaRadar.UI.Skia
             var lootItems = Memory.Game?.Loot?.FilteredLoot;
             if (lootItems is null) return;
 
-            const float maxDistance = 25f; // Maximum render distance for non-player entities
+            // Use configured render distance or unlimited if max is enabled
+            float maxDistance = App.Config.UI.AimviewLootRenderDistanceMax 
+                ? float.MaxValue 
+                : App.Config.UI.AimviewLootRenderDistance;
 
             foreach (var item in lootItems)
             {

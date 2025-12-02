@@ -373,7 +373,10 @@ namespace LoneEftDmaRadar.UI.ESP
             if (lootItems is null) return;
 
             var camPos = localPlayer?.Position ?? Vector3.Zero;
-            const float maxRenderDistance = 25f;
+            
+            // Use configured max distance, 0 = unlimited
+            float maxRenderDistance = App.Config.UI.EspLootMaxDistance;
+            bool unlimitedDistance = maxRenderDistance <= 0f;
 
             foreach (var item in lootItems)
             {
@@ -401,7 +404,7 @@ namespace LoneEftDmaRadar.UI.ESP
                     continue;
 
                 float distance = Vector3.Distance(camPos, item.Position);
-                if (distance > maxRenderDistance)
+                if (!unlimitedDistance && distance > maxRenderDistance)
                     continue;
 
                 if (WorldToScreen2WithScale(item.Position, out var screen, out float scale, screenWidth, screenHeight))
@@ -521,7 +524,7 @@ namespace LoneEftDmaRadar.UI.ESP
 
             bool selectAll = App.Config.Containers.SelectAll;
             var selected = App.Config.Containers.Selected;
-            const float maxRenderDistance = 25f; // Maximum render distance for containers
+            float maxRenderDistance = App.Config.Containers.EspDrawDistance;
             var color = GetContainerColorForRender();
 
             foreach (var container in containers)
