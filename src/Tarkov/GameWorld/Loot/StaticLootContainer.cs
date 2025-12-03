@@ -84,8 +84,10 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
 
             try
             {
-                // Read the _isSearched boolean flag at offset 0x168
-                Searched = Memory.ReadValue<bool>(_interactiveClass + Offsets.LootableContainer._isSearched);
+                // Read the _openInteraction pointer at offset 0x1C0
+                // If pointer is not null (0), the container has been opened/searched
+                var openInteraction = Memory.ReadPtr(_interactiveClass + Offsets.LootableContainer._openInteraction);
+                Searched = openInteraction != 0;
             }
             catch
             {

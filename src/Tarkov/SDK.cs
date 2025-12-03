@@ -6,15 +6,15 @@ namespace SDK
     public readonly partial struct Offsets
     {
         public readonly partial struct GameWorld
-		{
-			public const uint BtrController = 0x20; // EFT.Vehicle.BtrController
-			public const uint LocationId = 0xC0; // string - UPDATED from 0xB8
-			public const uint LootList = 0x180; // System.Collections.Generic.List<IKillable> - UPDATED from 0x178
-			public const uint RegisteredPlayers = 0x198; // System.Collections.Generic.List<IPlayer> - UPDATED from 0x190
-			public const uint MainPlayer = 0x1E8; // EFT.Player - UPDATED from 0x1E0
-			public const uint SynchronizableObjectLogicProcessor = 0x220; // EFT.SynchronizableObjects.SynchronizableObjectLogicProcessor - UPDATED from 0x218
-			public const uint Grenades = 0x260; // DictionaryListHydra<int, Throwable> - UPDATED from 0x258
-		}
+        {
+            public const uint BtrController = 0x20; // EFT.Vehicle.BtrController
+            public const uint LocationId = 0xC0; // string - UPDATED from 0xB8
+            public const uint LootList = 0x180; // System.Collections.Generic.List<IKillable> - UPDATED from 0x178
+            public const uint RegisteredPlayers = 0x198; // System.Collections.Generic.List<IPlayer> - UPDATED from 0x190
+            public const uint MainPlayer = 0x1E8; // EFT.Player - UPDATED from 0x1E0
+            public const uint SynchronizableObjectLogicProcessor = 0x220; // EFT.SynchronizableObjects.SynchronizableObjectLogicProcessor - UPDATED from 0x218
+            public const uint Grenades = 0x260; // DictionaryListHydra<int, Throwable> - UPDATED from 0x258
+        }
 
         public readonly partial struct SynchronizableObject
         {
@@ -50,7 +50,7 @@ namespace SDK
 
         public readonly partial struct Throwable
         {
-            public const uint _isDestroyed  = 0x4D; // Boolean
+            public const uint _isDestroyed = 0x4D; // Boolean
         }
 
         public readonly partial struct Player
@@ -69,13 +69,13 @@ namespace SDK
 
         public readonly partial struct ObservedPlayerView
         {
-			public const uint ObservedPlayerController = 0x20; // EFT.NextObservedPlayer.ObservedPlayerController
-			public const uint Voice = 0x38; // string
-			public const uint GroupID = 0x78; // string
-			public const uint Side = 0x8C; // EFT.EPlayerSide
-			public const uint IsAI = 0x98; // bool
-			public const uint AccountId = 0xB0; // string
-			public const uint PlayerBody = 0xC8; // EFT.PlayerBody
+            public const uint ObservedPlayerController = 0x20; // EFT.NextObservedPlayer.ObservedPlayerController
+            public const uint Voice = 0x38; // string
+            public const uint GroupID = 0x78; // string
+            public const uint Side = 0x8C; // EFT.EPlayerSide
+            public const uint IsAI = 0x98; // bool
+            public const uint AccountId = 0xB0; // string
+            public const uint PlayerBody = 0xC8; // EFT.PlayerBody
         }
 
         public readonly partial struct ObservedPlayerController
@@ -91,7 +91,7 @@ namespace SDK
             public const uint Rotation = 0x20; // UnityEngine.Vector2
         }
 
-          public readonly partial struct ObservedHealthController
+        public readonly partial struct ObservedHealthController
         {
             public const uint HealthStatus = 0x10; // ETagStatus
             public const uint _player = 0x18; // EFT.NextObservedPlayer.ObservedPlayerView
@@ -124,8 +124,8 @@ namespace SDK
             public const uint _tilt = 0xb0; // Single <_tilt> _tilt
             public const uint _physicalCondition = 0x198; // System.Int32 <_physicalCondition> _physicalCondition
             public const uint _speedLimitIsDirty = 0x1b9; // Boolean <_speedLimitIsDirty> _speedLimitIsDirty
-            public const uint StateSpeedLimit = 0x1bc; // Single <<StateSpeedLimit>k__BackingField> <StateSpeedLimit>k__BackingField
-            public const uint StateSprintSpeedLimit = 0x1c0; // Single <<StateSprintSpeedLimit>k__BackingField> <StateSprintSpeedLimit>k__BackingField
+            public const uint StateSpeedLimit = 0x1bc; // Single <<StateSpeedLimit>k_BackingField> <StateSpeedLimit>k_BackingField
+            public const uint StateSprintSpeedLimit = 0x1c0; // Single <<StateSprintSpeedLimit>k_BackingField> <StateSprintSpeedLimit>k_BackingField
             public const uint _lookDirection = 0x3b8; // UnityEngine.Vector3  <_lookDirection> _lookDirection
         }
 
@@ -156,8 +156,8 @@ namespace SDK
 
         public readonly partial struct LootableContainer
         {
-            public const uint _isSearched = 0x168; // System.Boolean - indicates if container has been searched
-            public const uint ItemOwner = 0x1C0; // System.Object - Container item owner
+            public const uint ItemOwner = 0x168; // -.\uEFB4
+            public const uint _openInteraction = 0x1C0; // System.Object - indicates open interaction state
         }
 
         public readonly partial struct LootableContainerItemOwner
@@ -208,7 +208,7 @@ namespace SDK
             public const uint _shotDirection = 0x1c8; // UnityEngine.Vector3 <_shotDirection> _shotDirection
             public const uint CameraSmoothOut = 0x20c; // Single <CameraSmoothOut> CameraSmoothOut
             public const uint PositionZeroSum = 0x31c; // UnityEngine.Vector3 <PositionZeroSum> PositionZeroSum
-            public const uint ShotNeedsFovAdjustments = 0x433; // Boolean <<ShotNeedsFovAdjustments>k__BackingField> <ShotNeedsFovAdjustments>k__BackingField
+            public const uint ShotNeedsFovAdjustments = 0x433; // Boolean <<ShotNeedsFovAdjustments>k_BackingField> <ShotNeedsFovAdjustments>k_BackingField
         }
 
         public readonly partial struct SightNBone
@@ -276,7 +276,7 @@ namespace SDK
         public readonly partial struct LootItemWeapon //Class: EFT.InventoryLogic.Weapon
         {
             public const uint FireMode = 0xa0; // EFT.InventoryLogic.FireModeComponent <FireMode> FireMode
-            public const uint Chambers = 0xb0; // EFT.InventoryLogic.Slot[] <<Chambers>k__BackingField> <Chambers>k__BackingField
+            public const uint Chambers = 0xb0; // EFT.InventoryLogic.Slot[] <<Chambers>k_BackingField> <Chambers>k_BackingField
             public const uint _magSlotCache = 0xc8; // EFT.InventoryLogic.Slot <_magSlotCache> _magSlotCache
         }
 
