@@ -317,11 +317,11 @@ namespace LoneEftDmaRadar.UI.ESP
                                              : ToColor(SKPaints.PaintExfilOpen);
                                          var textColor = GetExfilColorForRender();
 
-                                         // Scale radius with depth+zoom
-                                         float radius = Math.Clamp(4f * scale, 2f, 12f);
+                                         // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                                         float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
                                          ctx.DrawCircle(ToRaw(screen), radius, dotColor, true);
                                          
-                                         // Scale text with depth+zoom
+                                         // ? AIMVIEW SCALING: Scale text with perspective
                                          DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                                          ctx.DrawText(exfil.Name, screen.X + radius + 3, screen.Y + 4, textColor, textSize);
                                      }
@@ -383,16 +383,16 @@ namespace LoneEftDmaRadar.UI.ESP
 
             foreach (var item in lootItems)
             {
+                // ? Skip containers entirely - they're drawn in DrawStaticContainers()
+                if (item is StaticLootContainer or LootAirdrop)
+                    continue;
+
                 // Filter based on ESP settings
                 bool isCorpse = item is LootCorpse;
                 bool isQuest = item.IsQuestItem;
                 if (isQuest && !App.Config.UI.EspQuestLoot)
                     continue;
                 if (isCorpse && !App.Config.UI.EspCorpses)
-                    continue;
-
-                bool isContainer = item is StaticLootContainer or LootAirdrop;
-                if (isContainer && !App.Config.UI.EspContainers)
                     continue;
 
                 bool isFood = item.IsFood;
@@ -482,8 +482,8 @@ namespace LoneEftDmaRadar.UI.ESP
                          textColor = circleColor;
                      }
 
-                     // Scale radius with depth+zoom (like bones)
-                     float radius = Math.Clamp(3f * scale, 1.5f, 12f);
+                     // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                     float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
                      ctx.DrawCircle(ToRaw(screen), radius, circleColor, true);
 
                      if (item.Important || inCone)
@@ -508,7 +508,7 @@ namespace LoneEftDmaRadar.UI.ESP
                          
                          text = $"{text} D:{distance:F0}m";
 
-                         // Scale text with depth+zoom
+                         // ? AIMVIEW SCALING: Scale text with perspective
                          DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                          ctx.DrawText(text, screen.X + radius + 4, screen.Y + 4, textColor, textSize);
                     }
@@ -540,11 +540,17 @@ namespace LoneEftDmaRadar.UI.ESP
                 if (distance > maxRenderDistance)
                     continue;
 
-                if (!WorldToScreen2(container.Position, out var screen, screenWidth, screenHeight))
+                // ? Use WorldToScreen2WithScale (same as loot) for perspective-based scaling
+                if (!WorldToScreen2WithScale(container.Position, out var screen, out float scale, screenWidth, screenHeight))
                     continue;
 
-                ctx.DrawCircle(ToRaw(screen), 3f, color, true);
-                ctx.DrawText(container.Name ?? "Container", screen.X + 4, screen.Y + 4, color, DxTextSize.Small);
+                // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
+                ctx.DrawCircle(ToRaw(screen), radius, color, true);
+                
+                // ? AIMVIEW SCALING: Scale text with perspective
+                DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
+                ctx.DrawText(container.Name ?? "Container", screen.X + radius + 4, screen.Y + 4, color, textSize);
             }
         }
 
@@ -572,13 +578,13 @@ namespace LoneEftDmaRadar.UI.ESP
                     if (!WorldToScreen2WithScale(tripwire.Position, out var screen, out float scale, screenWidth, screenHeight))
                         continue;
 
-                    // Scale with depth+zoom (like bones and loot)
-                    float radius = Math.Clamp(3f * scale, 1.5f, 12f);
+                    // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                    float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
 
                     var color = GetTripwireColorForRender();
                     ctx.DrawCircle(ToRaw(screen), radius, color, true);
 
-                    // Scale text with depth+zoom
+                    // ? AIMVIEW SCALING: Scale text with perspective
                     DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                     ctx.DrawText("Tripwire", screen.X + radius + 4, screen.Y, color, textSize);
                 }
@@ -613,13 +619,13 @@ namespace LoneEftDmaRadar.UI.ESP
                     if (!WorldToScreen2WithScale(grenade.Position, out var screen, out float scale, screenWidth, screenHeight))
                         return;
 
-                    // Scale with depth+zoom (like bones and loot)
-                    float radius = Math.Clamp(3f * scale, 1.5f, 12f);
+                    // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                    float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
 
                     var color = GetGrenadeColorForRender();
                     ctx.DrawCircle(ToRaw(screen), radius, color, true);
 
-                    // Scale text with depth+zoom
+                    // ? AIMVIEW SCALING: Scale text with perspective
                     DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                     ctx.DrawText("Grenade", screen.X + radius + 4, screen.Y, color, textSize);
                 }
@@ -1196,11 +1202,11 @@ namespace LoneEftDmaRadar.UI.ESP
 
             scr = screen;
 
-            // Calculate scale based on distance from camera
-            var camPos = CameraManagerNew.CameraPosition;
-            float dist = Vector3.Distance(camPos, world);
+            // ? Calculate scale based on distance from PLAYER (not camera) - matches Aimview behavior
+            var playerPos = LocalPlayer?.Position ?? CameraManagerNew.CameraPosition;
+            float dist = Vector3.Distance(playerPos, world);
             
-            // ? CORRECTED: Perspective-based scaling - markers get SMALLER at greater distances (natural view)
+            // Perspective-based scaling - markers get SMALLER at greater distances (natural view)
             // At close range (5m): scale ~2.0x (larger, more visible)
             // At medium range (10m): scale ~1.0x (normal size)  
             // At far range (30m+): scale ~0.33x (smaller, less obtrusive)
