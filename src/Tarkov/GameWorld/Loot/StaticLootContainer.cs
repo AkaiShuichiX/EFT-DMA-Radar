@@ -37,6 +37,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
     public sealed class StaticLootContainer : LootItem
     {
         private static readonly TarkovMarketItem _default = new();
+        private readonly ulong _interactiveClass;
 
         public override string Name { get; }
 
@@ -65,10 +66,41 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
             }
         }
 
+        // Internal constructor for LootManager with InteractiveClass
+        internal StaticLootContainer(string containerId, Vector3 position, ulong interactiveClass)
+            : this(containerId, position)
+        {
+            _interactiveClass = interactiveClass;
+        }
+
+        /// <summary>
+        /// Updates the searched status of this container by reading memory.
+        /// Called periodically by LootManager.
+        /// </summary>
+        internal void UpdateSearchedStatus()
+        {
+            if (_interactiveClass == 0)
+                return;
+
+            try
+            {
+                // Read the _isSearched boolean flag at offset 0x168
+                Searched = Memory.ReadValue<bool>(_interactiveClass + Offsets.LootableContainer._isSearched);
+            }
+            catch
+            {
+                // Ignore errors during status update - container might have been removed
+            }
+        }
+
         public override void Draw(SKCanvas canvas, EftMapParams mapParams, LocalPlayer localPlayer)
         {
             // ✅ Respect the master "Show Static Containers" checkbox
             if (!App.Config.Containers.Enabled)
+                return;
+
+            // ✅ Hide searched containers if enabled
+            if (App.Config.Containers.HideSearched && Searched)
                 return;
 
             if (Position.WithinDistance(localPlayer.Position, App.Config.Containers.DrawDistance))
@@ -100,7 +132,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
 
         public override void DrawMouseover(SKCanvas canvas, EftMapParams mapParams, LocalPlayer localPlayer)
         {
-            Position.ToMapPos(mapParams.Map).ToZoomedPos(mapParams).DrawMouseoverText(canvas, Name);
+            var text = Searched ? $"{Name} (Searched)" : Name;
+            Position.ToMapPos(mapParams.Map).ToZoomedPos(mapParams).DrawMouseoverText(canvas, text);
         }
     }
 }

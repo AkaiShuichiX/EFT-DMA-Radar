@@ -136,9 +136,14 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
             }
             
             // Update positions for existing items (in case they were moved/dropped)
+            // Also update searched status for containers
             foreach (var item in _loot.Values)
             {
                 item.UpdatePosition();
+                if (item is StaticLootContainer container)
+                {
+                    container.UpdateSearchedStatus();
+                }
             }
             
             // Proceed to get new loot
@@ -265,7 +270,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
                             var ownerItemTemplate = Memory.ReadPtr(ownerItemBase + Offsets.LootItem.Template);
                             var ownerItemMongoId = Memory.ReadValue<MongoID>(ownerItemTemplate + Offsets.ItemTemplate._id);
                             var ownerItemId = ownerItemMongoId.ReadString();
-                            _ = _loot.TryAdd(p.ItemBase, new StaticLootContainer(ownerItemId, pos));
+                            _ = _loot.TryAdd(p.ItemBase, new StaticLootContainer(ownerItemId, pos, interactiveClass));
                         }
                     }
                     catch

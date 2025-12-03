@@ -238,12 +238,17 @@ namespace LoneEftDmaRadar.UI.Skia
 
             bool selectAll = App.Config.Containers.SelectAll;
             var selected = App.Config.Containers.Selected;
+            bool hideSearched = App.Config.Containers.HideSearched;
             float maxRenderDistance = App.Config.Containers.DrawDistance;
 
             foreach (var container in containers)
             {
                 var id = container.ID ?? "UNKNOWN";
                 if (!selectAll && !selected.ContainsKey(id))
+                    continue;
+
+                // ✅ Hide searched containers if enabled
+                if (hideSearched && container.Searched)
                     continue;
 
                 float distance = Vector3.Distance(localPlayer.Position, container.Position);

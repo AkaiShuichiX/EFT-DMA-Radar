@@ -156,7 +156,8 @@ namespace SDK
 
         public readonly partial struct LootableContainer
         {
-            public const uint ItemOwner = 0x168; // -.\uEFB4
+            public const uint _isSearched = 0x168; // System.Boolean - indicates if container has been searched
+            public const uint ItemOwner = 0x1C0; // System.Object - Container item owner
         }
 
         public readonly partial struct LootableContainerItemOwner
