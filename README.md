@@ -6,6 +6,9 @@ This repository and it's code serve as educational resource only. Use with cauti
 
 Fork of [Moulman EFT DMA Radar](https://github.com/moulmandev/EFT-DMA-Radar) ([Lone EFT DMA Radar](https://github.com/lone-dma/Lone-EFT-DMA-Radar)) with additional ESP, aimbot, and memory-write features.
 
+### For a clean, legit based solution check out the guy who lead us all here:
+--> [LONE](https://github.com/lone-dma/Lone-EFT-DMA-Radar)
+
 ## AI WARNING ⚠️
 Commits in this Fork (Lum0s36) are mainly AI generated and changes are not always tested right away. Please check the code first if you're unsure.
 
