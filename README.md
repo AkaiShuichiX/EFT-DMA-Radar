@@ -13,6 +13,17 @@ This app has been tested on 🪟 Windows 11 25H2 (Game) and 🪟 Windows 11 23H2
 
 **Note:** All current testing is done with both the radar and game running at **1920x1080** resolution.  
 
+## Things I won't touch unless Mambo/x0m made it open source
+- writing
+
+## Features that are to be added in future commits ⌨️
+
+- Wishlist items on Radar/ESP/Aimview
+- Lootfilter and Wishlist items on AI gear slots indicated by either "!!" or the exact name (short)
+- Exfils show if opened or closed
+- Quest tracker including zones, req. Keys and Items and only Q_items of active quests on radar/ESP/Aimview
+- ...?
+
 ## Features ✨
 
 - Configurable Aimview widget
@@ -33,7 +44,7 @@ This Chair creates it's own Config folder to be distinguishable from other confi
 
 ##  Common Issues ⚠️
 
-### ESP has issues, especially when ADS and using optics. Work in progress 🛠
+### ESP and Aimview Head Circles are not handled (and are not code-wise) part of the skeleton and don't scale like you'd expect them to. Work in progress 🛠
 
 ### DX Overlay/D3DX Errors ("DX overlay init failed", "ESP DX init failed: System.DllNotFoundException: Unable to load DLL 'd3dx943.dll'...")
 
@@ -52,8 +63,8 @@ This means your PC does **not** have the required legacy DirectX 9 *D3DX* runtim
 1. **On your Radar PC**, download and run Microsoft’s official installer:
 
    👉 [DirectX End-User Runtime (June 2010)](https://www.microsoft.com/en-us/download/details.aspx?id=8109)
-
-   > This will add the required DirectX 9 component (`d3dx9_43.dll`) and several others needed by the overlay.
+   👉🏻 Installer instant download [dxwebsetup.exe] (https://download.microsoft.com/download/1/7/1/1718CCC4-6315-4D8E-9543-8E28A4E18C4C/dxwebsetup.exe)
+   > Installing either of these will add the required DirectX 9 component (`d3dx9_43.dll`) and several others needed by the overlay.
 
 2. **Follow the install prompts** to complete setup.
 
