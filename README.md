@@ -1,5 +1,7 @@
 # Lum0s36's EFT DMA Radar
 
+### README README README README README README README README README README README README README README README README README README README README README README README README
+
 This repository and it's code serve as educational resource only. Use with caution and make yourself familiar with the code before use.
 
 Fork of [Moulman EFT DMA Radar](https://github.com/moulmandev/EFT-DMA-Radar) ([Lone EFT DMA Radar](https://github.com/lone-dma/Lone-EFT-DMA-Radar)) with additional ESP, aimbot, and memory-write features.
