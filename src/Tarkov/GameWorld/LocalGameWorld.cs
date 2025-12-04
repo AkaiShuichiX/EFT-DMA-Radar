@@ -312,8 +312,28 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld
             ValidatePlayerTransforms(); // Check for transform anomalies
             // Sync FilteredLoot
             Loot.Refresh(ct);
-             // Refresh player equipment
+            // Refresh player equipment
             RefreshEquipment();
+            // Refresh Wishlist
+            RefreshWishlist();
+        }
+
+        /// <summary>
+        /// Refreshes the wishlist from game memory.
+        /// </summary>
+        private void RefreshWishlist()
+        {
+            if (!App.Config.Loot.ShowWishlistedRadar)
+                return;
+
+            try
+            {
+                LocalPlayer?.RefreshWishlist();
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogDebug($"[Wishlist] ERROR Refreshing: {ex}");
+            }
         }
 
         private void RefreshEquipment()

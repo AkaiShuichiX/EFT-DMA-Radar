@@ -53,11 +53,16 @@ namespace LoneEftDmaRadar.UI.Loot
             bool showFood = ShowFood;
             bool showBackpacks = ShowBackpacks;
             bool showQuestItems = ShowQuestItems;
+            bool showWishlisted = App.Config.Loot.ShowWishlistedRadar;
+            
             if (usePrices)
             {
                 Predicate<LootItem> p = x => // Default Predicate
                 {
                     if (x.IsQuestItem && showQuestItems)
+                        return true;
+                    // Wishlist items always pass the filter when enabled
+                    if (showWishlisted && x.IsWishlisted)
                         return true;
                     return (x.IsRegularLoot || x.IsValuableLoot || x.IsImportant) ||
                                 (showBackpacks && x.IsBackpack) ||
@@ -91,6 +96,9 @@ namespace LoneEftDmaRadar.UI.Loot
                 var names = search!.Split(',').Select(a => a.Trim()).ToList(); // Pooled wasnt working well here
                 Predicate<LootItem> p = x => // Search Predicate
                 {
+                    // Wishlist items also show during search when enabled
+                    if (showWishlisted && x.IsWishlisted)
+                        return true;
                     return names.Any(a => x.Name.Contains(a, StringComparison.OrdinalIgnoreCase));
                 };
                 return item =>

@@ -29,6 +29,7 @@ SOFTWARE.
 using System.Diagnostics;
 using Collections.Pooled;
 using LoneEftDmaRadar.Tarkov.Unity;
+using LoneEftDmaRadar.Tarkov.Unity.Collections;
 using LoneEftDmaRadar.Tarkov.Unity.Structures;
 using LoneEftDmaRadar.UI.Misc;
 using VmmSharpEx.Scatter;
@@ -37,6 +38,17 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
 {
     public sealed class LocalPlayer : ClientPlayer
     {
+        #region Wishlist Static Members
+
+        /// <summary>
+        /// Statische Sammlung aller Wishlist-Item-IDs.
+        /// </summary>
+        public static IReadOnlySet<string> WishlistItems => _wishlistItems;
+        private static HashSet<string> _wishlistItems = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Lock _wishlistLock = new();
+
+        #endregion
+
         /// <summary>
         /// Firearm Manager for tracking weapon/ammo/ballistics.
         /// </summary>
@@ -131,6 +143,67 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
             catch
             {
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the Wishlist from game memory.
+        /// Should be called periodically from a background thread.
+        /// </summary>
+        public void RefreshWishlist()
+        {
+            try
+            {
+                var wishlistManager = Memory.ReadPtr(Profile + Offsets.Profile.WishlistManager);
+                if (wishlistManager == 0)
+                {
+                    DebugLogger.LogDebug("[Wishlist] WishlistManager is null");
+                    return;
+                }
+
+                // Try _wishlistItems first (0x30), fallback to _userItems (0x28) if needed
+                var itemsPtr = Memory.ReadPtr(wishlistManager + Offsets.WishlistManager.WishlistItems);
+                if (itemsPtr == 0)
+                {
+                    // Fallback to UserItems
+                    itemsPtr = Memory.ReadPtr(wishlistManager + Offsets.WishlistManager.UserItems);
+                }
+                
+                if (itemsPtr == 0)
+                {
+                    DebugLogger.LogDebug("[Wishlist] Items dictionary is null");
+                    return;
+                }
+
+                using var items = UnityDictionary<MongoID, int>.Create(itemsPtr);
+                var newWishlist = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var entry in items.Span)
+                {
+                    try
+                    {
+                        var itemId = entry.Key.ReadString();
+                        if (!string.IsNullOrEmpty(itemId))
+                        {
+                            newWishlist.Add(itemId);
+                        }
+                    }
+                    catch
+                    {
+                        // Skip invalid entries
+                    }
+                }
+
+                lock (_wishlistLock)
+                {
+                    _wishlistItems = newWishlist;
+                }
+
+                DebugLogger.LogDebug($"[Wishlist] Refreshed: {newWishlist.Count} items");
+            }
+            catch (Exception ex)
+            {
+                DebugLogger.LogDebug($"[Wishlist] ERROR Refreshing: {ex}");
             }
         }
 

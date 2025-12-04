@@ -103,6 +103,13 @@ namespace SDK
             public const uint Id = 0x10; // String
             public const uint AccountId = 0x18; // String
             public const uint Info = 0x48; // -.\uE9AD
+            public const uint WishlistManager = 0x108; // EFT.WishlistManager
+        }
+
+        public readonly partial struct WishlistManager
+        {
+            public const uint UserItems = 0x28; // GenericInst _userItems - Dictionary<MongoID, Int32> (items added by user)
+            public const uint WishlistItems = 0x30; // GenericInst _wishlistItems - full wishlist items
         }
 
         public readonly partial struct PlayerInfo
