@@ -156,41 +156,26 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
             {
                 var wishlistManager = Memory.ReadPtr(Profile + Offsets.Profile.WishlistManager);
                 if (wishlistManager == 0)
-                {
-                    DebugLogger.LogDebug("[Wishlist] WishlistManager is null");
                     return;
-                }
 
-                // Try _wishlistItems first (0x30), fallback to _userItems (0x28) if needed
-                var itemsPtr = Memory.ReadPtr(wishlistManager + Offsets.WishlistManager.WishlistItems);
-                if (itemsPtr == 0)
-                {
-                    // Fallback to UserItems
-                    itemsPtr = Memory.ReadPtr(wishlistManager + Offsets.WishlistManager.UserItems);
-                }
-                
-                if (itemsPtr == 0)
-                {
-                    DebugLogger.LogDebug("[Wishlist] Items dictionary is null");
-                    return;
-                }
-
-                using var items = UnityDictionary<MongoID, int>.Create(itemsPtr);
                 var newWishlist = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                foreach (var entry in items.Span)
+                // Try _userItems first (0x28) - this is Dictionary<MongoID, int>
+                var userItemsPtr = Memory.ReadPtr(wishlistManager + Offsets.WishlistManager.UserItems);
+                
+                if (userItemsPtr != 0)
                 {
-                    try
+                    ReadDictionaryItems(userItemsPtr, newWishlist);
+                }
+
+                // Also try _wishlistItems (0x30) if no items found
+                if (newWishlist.Count == 0)
+                {
+                    var wishlistItemsPtr = Memory.ReadPtr(wishlistManager + Offsets.WishlistManager.WishlistItems);
+                    
+                    if (wishlistItemsPtr != 0 && wishlistItemsPtr != userItemsPtr)
                     {
-                        var itemId = entry.Key.ReadString();
-                        if (!string.IsNullOrEmpty(itemId))
-                        {
-                            newWishlist.Add(itemId);
-                        }
-                    }
-                    catch
-                    {
-                        // Skip invalid entries
+                        ReadDictionaryItems(wishlistItemsPtr, newWishlist);
                     }
                 }
 
@@ -198,12 +183,77 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Player
                 {
                     _wishlistItems = newWishlist;
                 }
-
-                DebugLogger.LogDebug($"[Wishlist] Refreshed: {newWishlist.Count} items");
             }
-            catch (Exception ex)
+            catch
             {
-                DebugLogger.LogDebug($"[Wishlist] ERROR Refreshing: {ex}");
+                // Silently fail - wishlist is optional feature
+            }
+        }
+
+        /// <summary>
+        /// Reads items from a Dictionary<MongoID, int> structure.
+        /// </summary>
+        private void ReadDictionaryItems(ulong dictPtr, HashSet<string> results)
+        {
+            try
+            {
+                // Try multiple count offsets
+                var count1 = Memory.ReadValue<int>(dictPtr + 0x20);
+                var count2 = Memory.ReadValue<int>(dictPtr + 0x40);
+                var count = (count1 > 0 && count1 < 1000) ? count1 : count2;
+
+                if (count <= 0 || count > 500)
+                    return;
+
+                var entriesPtr = Memory.ReadPtr(dictPtr + 0x18);
+                if (entriesPtr == 0)
+                    return;
+
+                // Try different entry layouts
+                int[] entrySizes = { 0x28, 0x30, 0x20, 0x38 };
+                int[] keyOffsets = { 0x08, 0x10, 0x00 };
+                
+                foreach (var entrySize in entrySizes)
+                {
+                    foreach (var keyOffset in keyOffsets)
+                    {
+                        var tempResults = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        var entriesStart = entriesPtr + 0x20; // Skip array header
+                        
+                        for (int i = 0; i < count; i++)
+                        {
+                            try
+                            {
+                                var entryAddr = entriesStart + (ulong)(i * entrySize);
+                                // MongoID._stringId is at offset 0x10 within MongoID
+                                var stringIdPtr = Memory.ReadPtr(entryAddr + (ulong)keyOffset + 0x10);
+                                
+                                if (stringIdPtr != 0 && stringIdPtr > 0x10000)
+                                {
+                                    var itemId = Memory.ReadUnicodeString(stringIdPtr, 64, true);
+                                    if (!string.IsNullOrEmpty(itemId) && itemId.Length >= 20 && itemId.Length <= 30)
+                                    {
+                                        tempResults.Add(itemId);
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                        
+                        if (tempResults.Count > 0)
+                        {
+                            foreach (var id in tempResults)
+                            {
+                                results.Add(id);
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Silently fail
             }
         }
 
