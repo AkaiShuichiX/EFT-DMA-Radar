@@ -1,6 +1,6 @@
 # Lum0s36's EFT DMA Radar
 
-### README README README README README README README README README README README README README README README README README README README README README README README README
+### README (please)
 
 This repository and it's code serve as educational resource only. Use with caution and make yourself familiar with the code before use.
 
