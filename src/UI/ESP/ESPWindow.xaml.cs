@@ -515,7 +515,7 @@ namespace LoneEftDmaRadar.UI.ESP
 
         private void DrawStaticContainers(Dx9RenderContext ctx, float screenWidth, float screenHeight, LocalPlayer localPlayer)
         {
-            // ? ESP uses its own separate checkbox (App.Config.UI.EspContainers)
+            // ESP uses its own separate checkbox (App.Config.UI.EspContainers)
             if (!App.Config.UI.EspContainers)
                 return;
 
@@ -527,6 +527,7 @@ namespace LoneEftDmaRadar.UI.ESP
             var selected = App.Config.Containers.Selected;
             bool hideSearched = App.Config.Containers.HideSearched;
             float maxRenderDistance = App.Config.Containers.EspDrawDistance;
+            bool unlimitedDistance = maxRenderDistance <= 0f; // 0 = unlimited
             var color = GetContainerColorForRender();
 
             foreach (var container in containers)
@@ -535,23 +536,23 @@ namespace LoneEftDmaRadar.UI.ESP
                 if (!selectAll && !selected.ContainsKey(id))
                     continue;
 
-                // ? Hide searched containers if enabled
+                // Hide searched containers if enabled
                 if (hideSearched && container.Searched)
                     continue;
 
                 float distance = Vector3.Distance(localPlayer.Position, container.Position);
-                if (distance > maxRenderDistance)
+                if (!unlimitedDistance && distance > maxRenderDistance)
                     continue;
 
-                // ? Use WorldToScreen2WithScale (same as loot) for perspective-based scaling
+                // Use WorldToScreen2WithScale (same as loot) for perspective-based scaling
                 if (!WorldToScreen2WithScale(container.Position, out var screen, out float scale, screenWidth, screenHeight))
                     continue;
 
-                // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                // AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
                 float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
                 ctx.DrawCircle(ToRaw(screen), radius, color, true);
                 
-                // ? AIMVIEW SCALING: Scale text with perspective
+                // AIMVIEW SCALING: Scale text with perspective
                 DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                 ctx.DrawText(container.Name ?? "Container", screen.X + radius + 4, screen.Y + 4, color, textSize);
             }

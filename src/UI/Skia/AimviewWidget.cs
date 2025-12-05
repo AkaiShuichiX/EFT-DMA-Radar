@@ -139,7 +139,7 @@ namespace LoneEftDmaRadar.UI.Skia
 
             foreach (var exit in Exits)
             {
-                if (exit is not Exfil exfil || (exfil.Status != Exfil.EStatus.Open && exfil.Status != Exfil.EStatus.Pending))
+                if (exit is not Exfil exfil)
                     continue;
 
                 float distance = Vector3.Distance(localPlayer.Position, exfil.Position);
@@ -148,9 +148,7 @@ namespace LoneEftDmaRadar.UI.Skia
 
                 if (TryProject(exfil.Position, out var screen, out float scale, localPlayer))
                 {
-                    var paint = exfil.Status == Exfil.EStatus.Pending
-                        ? SKPaints.PaintExfilPending
-                        : SKPaints.PaintExfilOpen;
+                    var paint = SKPaints.PaintExfilOpen;
 
                     // Scale radius with perspective (from TryProject)
                     float r = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
@@ -228,8 +226,8 @@ namespace LoneEftDmaRadar.UI.Skia
 
         private void DrawStaticContainers(LocalPlayer localPlayer)
         {
-            // ✅ Controlled by Radar "Show Static Containers" checkbox
-            if (!App.Config.Containers.Enabled)
+            // Controlled by Aimview-specific "Show Containers" checkbox
+            if (!App.Config.AimviewWidget.ShowContainers)
                 return;
 
             var containers = Memory.Game?.Loot?.AllLoot?.OfType<StaticLootContainer>();
@@ -239,7 +237,8 @@ namespace LoneEftDmaRadar.UI.Skia
             bool selectAll = App.Config.Containers.SelectAll;
             var selected = App.Config.Containers.Selected;
             bool hideSearched = App.Config.Containers.HideSearched;
-            float maxRenderDistance = App.Config.Containers.DrawDistance;
+            float maxRenderDistance = App.Config.AimviewWidget.ContainerDistance;
+            bool unlimitedDistance = maxRenderDistance <= 0f; // 0 = unlimited
 
             foreach (var container in containers)
             {
@@ -247,12 +246,12 @@ namespace LoneEftDmaRadar.UI.Skia
                 if (!selectAll && !selected.ContainsKey(id))
                     continue;
 
-                // ✅ Hide searched containers if enabled
+                // Hide searched containers if enabled
                 if (hideSearched && container.Searched)
                     continue;
 
                 float distance = Vector3.Distance(localPlayer.Position, container.Position);
-                if (distance > maxRenderDistance)
+                if (!unlimitedDistance && distance > maxRenderDistance)
                     continue;
 
                 if (TryProject(container.Position, out var screen, out float scale, localPlayer))
@@ -415,7 +414,8 @@ namespace LoneEftDmaRadar.UI.Skia
             var lootItems = Memory.Game?.Loot?.FilteredLoot;
             if (lootItems is null) return;
 
-            float maxDistance = App.Config.UI.AimviewLootRenderDistanceMax 
+            // 0 = unlimited distance
+            float maxDistance = App.Config.UI.AimviewLootRenderDistance <= 0
                 ? float.MaxValue 
                 : App.Config.UI.AimviewLootRenderDistance;
 

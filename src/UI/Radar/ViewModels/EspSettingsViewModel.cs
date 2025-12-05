@@ -776,6 +776,14 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        /// <summary>
+        /// Public method to notify property changes from external sources (e.g., Set Global buttons).
+        /// </summary>
+        public void NotifyPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
 }

@@ -56,6 +56,8 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             OpenColorPickerCommand = new SimpleCommand(OnOpenColorPicker);
             BackupConfigCommand = new SimpleCommand(OnBackupConfig);
             OpenConfigCommand = new SimpleCommand(OnOpenConfig);
+            SetContainersGlobalCommand = new SimpleCommand(OnSetContainersGlobal);
+            SetContainerDistanceGlobalCommand = new SimpleCommand(OnSetContainerDistanceGlobal);
             SetScaleValues(UIScale);
         }
 
@@ -428,6 +430,21 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public ICommand SetContainersGlobalCommand { get; }
+        private void OnSetContainersGlobal()
+        {
+            // Set current Radar value to Aimview and ESP
+            bool value = App.Config.Containers.Enabled;
+            
+            // Update Aimview (same ViewModel - direct property update)
+            App.Config.AimviewWidget.ShowContainers = value;
+            OnPropertyChanged(nameof(AimviewShowContainers));
+            
+            // Update ESP (different ViewModel - need to notify)
+            App.Config.UI.EspContainers = value;
+            MainWindow.Instance?.EspSettings?.ViewModel?.NotifyPropertyChanged(nameof(EspSettingsViewModel.EspContainers));
+        }
+
         public int ContainerDistance
         {
             get => (int)Math.Round(App.Config.Containers.DrawDistance);
@@ -439,6 +456,21 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
                     OnPropertyChanged(nameof(ContainerDistance));
                 }
             }
+        }
+
+        public ICommand SetContainerDistanceGlobalCommand { get; }
+        private void OnSetContainerDistanceGlobal()
+        {
+            // Set current Radar Container Distance to Aimview and ESP
+            float value = App.Config.Containers.DrawDistance;
+            
+            // Update Aimview (same ViewModel - direct property update)
+            App.Config.AimviewWidget.ContainerDistance = value;
+            OnPropertyChanged(nameof(AimviewContainerDistance));
+            
+            // Update ESP (different ViewModel - need to notify)
+            App.Config.Containers.EspDrawDistance = value;
+            MainWindow.Instance?.EspSettings?.ViewModel?.NotifyPropertyChanged(nameof(EspSettingsViewModel.EspContainerDistance));
         }
 
         public bool ShowCorpseMarkers
@@ -523,6 +555,19 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
+        public bool AimviewShowContainers
+        {
+            get => App.Config.AimviewWidget.ShowContainers;
+            set
+            {
+                if (App.Config.AimviewWidget.ShowContainers != value)
+                {
+                    App.Config.AimviewWidget.ShowContainers = value;
+                    OnPropertyChanged(nameof(AimviewShowContainers));
+                }
+            }
+        }
+
         public float AimviewLootRenderDistance
         {
             get => App.Config.UI.AimviewLootRenderDistance;
@@ -536,15 +581,15 @@ namespace LoneEftDmaRadar.UI.Radar.ViewModels
             }
         }
 
-        public bool AimviewLootRenderDistanceMax
+        public float AimviewContainerDistance
         {
-            get => App.Config.UI.AimviewLootRenderDistanceMax;
+            get => App.Config.AimviewWidget.ContainerDistance;
             set
             {
-                if (App.Config.UI.AimviewLootRenderDistanceMax != value)
+                if (Math.Abs(App.Config.AimviewWidget.ContainerDistance - value) > float.Epsilon)
                 {
-                    App.Config.UI.AimviewLootRenderDistanceMax = value;
-                    OnPropertyChanged(nameof(AimviewLootRenderDistanceMax));
+                    App.Config.AimviewWidget.ContainerDistance = value;
+                    OnPropertyChanged(nameof(AimviewContainerDistance));
                 }
             }
         }

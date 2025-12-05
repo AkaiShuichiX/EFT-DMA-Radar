@@ -1180,6 +1180,18 @@ namespace LoneEftDmaRadar
         /// </summary>
         [JsonPropertyName("showWishlisted")]
         public bool ShowWishlisted { get; set; } = true;
+
+        /// <summary>
+        /// Show static containers in Aimview.
+        /// </summary>
+        [JsonPropertyName("showContainers")]
+        public bool ShowContainers { get; set; } = false;
+
+        /// <summary>
+        /// Maximum distance to draw containers in Aimview. 0 = unlimited.
+        /// </summary>
+        [JsonPropertyName("containerDistance")]
+        public float ContainerDistance { get; set; } = 100f;
     }
 
     public sealed class InfoWidgetConfig

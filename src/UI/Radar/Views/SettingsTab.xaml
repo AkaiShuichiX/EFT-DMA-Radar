@@ -167,9 +167,15 @@ Toggle Fullscreen: F11
                                   IsChecked="{Binding ShowLoot, Mode=TwoWay}"
                                   Margin="0,0,16,8" />
                         <CheckBox Content="Show Static Containers"
-                                  ToolTip="Shows static containers on the map/ESP."
+                                  ToolTip="Shows static containers on the Radar map."
                                   IsChecked="{Binding ShowStaticContainers, Mode=TwoWay}"
-                                  Margin="0,0,16,8" />
+                                  Margin="0,0,8,8" />
+                        <Button Content="⟳ Set Global"
+                                ToolTip="Apply this setting to Aimview and ESP"
+                                Command="{Binding SetContainersGlobalCommand}"
+                                MinWidth="90"
+                                Height="28"
+                                Margin="0,0,16,8" />
                         <CheckBox Content="Draw Corpse Markers"
                                   ToolTip="Shows corpse markers on Radar and Aimview (independent from ESP)."
                                   IsChecked="{Binding ShowCorpseMarkers, Mode=TwoWay}"
@@ -180,7 +186,7 @@ Toggle Fullscreen: F11
                                 VerticalAlignment="Center"
                                 Margin="0,0,16,8"
                                 IsEnabled="{Binding ShowStaticContainers}">
-                        <TextBlock Text="Container Distance"
+                        <TextBlock Text="Container Distance (0 = Unlimited)"
                                    VerticalAlignment="Center" />
                         <Slider x:Name="ContainerDistSlider"
                                 Width="150"
@@ -193,6 +199,12 @@ Toggle Fullscreen: F11
                         <TextBlock Text="{Binding Value, ElementName=ContainerDistSlider}"
                                    VerticalAlignment="Center"
                                    Margin="8,0,0,0" />
+                        <Button Content="⟳ Set Global"
+                                ToolTip="Apply this distance to Aimview and ESP"
+                                Command="{Binding SetContainerDistanceGlobalCommand}"
+                                MinWidth="90"
+                                Height="28"
+                                Margin="8,0,0,0" />
                     </StackPanel>
 
                     <!-- Header buttons (static size, side by side) -->
@@ -287,6 +299,10 @@ Configure what entities are rendered in the Aimview widget.
                         <CheckBox Content="Head Circle"
                                   ToolTip="Draw head circles for players and AI in Aimview widget"
                                   IsChecked="{Binding AimviewShowHeadCircle, Mode=TwoWay}"
+                                  Margin="0,0,16,8" />
+                        <CheckBox Content="Show Containers"
+                                  ToolTip="Show static containers in Aimview widget"
+                                  IsChecked="{Binding AimviewShowContainers, Mode=TwoWay}"
                                   Margin="0,0,0,8" />
                     </WrapPanel>
 
@@ -298,27 +314,42 @@ Configure what entities are rendered in the Aimview widget.
                                   Margin="0,0,0,0" />
                     </WrapPanel>
                     
-                    <CheckBox Content="Item render distance max"
-                              ToolTip="Render loot items at maximum distance (unlimited). When enabled, the slider below is disabled."
-                              IsChecked="{Binding AimviewLootRenderDistanceMax, Mode=TwoWay}"
-                              Margin="0,4,0,8" />
-                    
                     <StackPanel Orientation="Horizontal"
                                 VerticalAlignment="Center"
-                                Margin="0,0,0,8"
-                                IsEnabled="{Binding AimviewLootRenderDistanceMax, Converter={StaticResource InverseBoolConverter}}">
-                        <TextBlock Text="Loot Render Distance"
+                                Margin="0,0,0,8">
+                        <TextBlock Text="Loot Render Distance (0 = Unlimited)"
                                    VerticalAlignment="Center"
-                                   ToolTip="Maximum distance (in meters) to render loot items in Aimview. Default is 25m (slider middle position)." />
+                                   ToolTip="Maximum distance (in meters) to render loot items in Aimview. 0 = unlimited." />
                         <Slider x:Name="AimviewLootDistanceSlider"
                                 Width="200"
                                 Margin="8,0"
-                                Minimum="1"
+                                Minimum="0"
                                 Maximum="150"
                                 SmallChange="1"
                                 LargeChange="10"
                                 Value="{Binding AimviewLootRenderDistance, Mode=TwoWay}" />
                         <TextBlock Text="{Binding Value, ElementName=AimviewLootDistanceSlider, StringFormat='{}{0:F0}m'}"
+                                   VerticalAlignment="Center"
+                                   Margin="8,0,0,0"
+                                   MinWidth="50" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Margin="0,0,0,8"
+                                IsEnabled="{Binding AimviewShowContainers}">
+                        <TextBlock Text="Container Distance (0 = Unlimited)"
+                                   VerticalAlignment="Center"
+                                   ToolTip="Maximum distance (in meters) to render containers in Aimview. 0 = unlimited." />
+                        <Slider x:Name="AimviewContainerDistanceSlider"
+                                Width="150"
+                                Margin="8,0"
+                                Minimum="0"
+                                Maximum="200"
+                                SmallChange="1"
+                                LargeChange="10"
+                                Value="{Binding AimviewContainerDistance, Mode=TwoWay}" />
+                        <TextBlock Text="{Binding Value, ElementName=AimviewContainerDistanceSlider, StringFormat='{}{0:F0}m'}"
                                    VerticalAlignment="Center"
                                    Margin="8,0,0,0"
                                    MinWidth="50" />
