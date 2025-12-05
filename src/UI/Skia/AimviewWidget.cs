@@ -421,11 +421,11 @@ namespace LoneEftDmaRadar.UI.Skia
 
             foreach (var item in lootItems)
             {
-                // ✅ Skip containers - they're drawn separately in DrawStaticContainers()
+                // Skip containers - they're drawn separately in DrawStaticContainers()
                 if (item is StaticLootContainer)
                     continue;
 
-                // ✅ Skip corpses - they're drawn separately in DrawCorpseMarkers()
+                // Skip corpses - they're drawn separately in DrawCorpseMarkers()
                 if (item is LootCorpse)
                     continue;
 
@@ -441,30 +441,74 @@ namespace LoneEftDmaRadar.UI.Skia
                     // Scale radius with perspective (from TryProject)
                     float r = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
                     
-                    var paint = SKPaints.PaintFilteredLoot;
-                    var textPaint = SKPaints.TextFilteredLoot;
-                    var filterColor = item.CustomFilter?.Color;
-                    if (!string.IsNullOrEmpty(filterColor) && SKColor.TryParse(filterColor, out var skColor))
+                    // Determine paint and text paint based on item properties
+                    // Priority: Quest > Wishlist > Category > CustomFilter > Valuable > Default
+                    SKPaint paint;
+                    SKPaint textPaint;
+                    
+                    if (item.IsQuestItem)
                     {
-                        paint = new SKPaint
+                        paint = SKPaints.PaintQuestItem;
+                        textPaint = SKPaints.TextQuestItem;
+                    }
+                    else if (item.IsWishlisted)
+                    {
+                        // Wishlist items use RED color and override custom filters
+                        paint = SKPaints.PaintWishlistItem;
+                        textPaint = SKPaints.TextWishlistItem;
+                    }
+                    else if (item.IsBackpack)
+                    {
+                        paint = SKPaints.PaintBackpacks;
+                        textPaint = SKPaints.TextBackpacks;
+                    }
+                    else if (item.IsMeds)
+                    {
+                        paint = SKPaints.PaintMeds;
+                        textPaint = SKPaints.TextMeds;
+                    }
+                    else if (item.IsFood)
+                    {
+                        paint = SKPaints.PaintFood;
+                        textPaint = SKPaints.TextFood;
+                    }
+                    else
+                    {
+                        // Check for custom filter color
+                        var filterColor = item.CustomFilter?.Color;
+                        if (!string.IsNullOrEmpty(filterColor) && SKColor.TryParse(filterColor, out var skColor))
                         {
-                            Color = skColor,
-                            StrokeWidth = paint.StrokeWidth,
-                            Style = paint.Style,
-                            IsAntialias = paint.IsAntialias
-                        };
-                        textPaint = new SKPaint
+                            paint = new SKPaint
+                            {
+                                Color = skColor,
+                                StrokeWidth = 0.25f,
+                                Style = SKPaintStyle.Fill,
+                                IsAntialias = true
+                            };
+                            textPaint = new SKPaint
+                            {
+                                Color = skColor,
+                                IsStroke = false,
+                                IsAntialias = true
+                            };
+                        }
+                        else if (item.IsValuableLoot)
                         {
-                            Color = skColor,
-                            IsStroke = false,
-                            IsAntialias = true
-                        };
+                            paint = SKPaints.PaintImportantLoot;
+                            textPaint = SKPaints.TextImportantLoot;
+                        }
+                        else
+                        {
+                            paint = SKPaints.PaintFilteredLoot;
+                            textPaint = SKPaints.TextFilteredLoot;
+                        }
                     }
 
                     _canvas.DrawCircle(screen.X, screen.Y, r, paint);
 
-                    var shortName = string.IsNullOrWhiteSpace(item.ShortName) ? item.Name : item.ShortName;
-                    var label = $"{shortName} D:{distance:F0}m";
+                    // Use GetUILabel() to get consistent label with "!!" prefix for wishlist items
+                    var label = item.GetUILabel();
+                    label = $"{label} D:{distance:F0}m";
                     
                     // Scale font with perspective
                     float baseFontSize = SKFonts.EspWidgetFont.Size * scale * 0.9f;

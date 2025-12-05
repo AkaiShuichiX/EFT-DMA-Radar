@@ -370,7 +370,8 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
         public string GetUILabel()
         {
             var label = "";
-            if (IsImportant)
+            // "!!" only for Wishlist items, not all Important items
+            if (IsWishlisted)
                 label += "!!";
             else if (Price > 0)
                 label += $"[{Utilities.FormatNumberKM(Price)}] ";
@@ -385,6 +386,7 @@ namespace LoneEftDmaRadar.Tarkov.GameWorld.Loot
         {
             if (IsQuestItem)
                 return new(SKPaints.PaintQuestItem, SKPaints.TextQuestItem);
+            // Wishlist takes priority over custom filters
             if (IsWishlisted)
                 return new(SKPaints.PaintWishlistItem, SKPaints.TextWishlistItem);
             if (LootFilter.ShowBackpacks && IsBackpack)

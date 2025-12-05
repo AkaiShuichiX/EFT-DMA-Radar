@@ -303,8 +303,7 @@ namespace LoneEftDmaRadar.UI.ESP
                             const float exfilMaxDistance = 25f;
                             foreach (var exit in Exits)
                             {
-                                // ? Add missing status checks like Aimview
-                                if (exit is Exfil exfil && (exfil.Status == Exfil.EStatus.Open || exfil.Status == Exfil.EStatus.Pending))
+                                if (exit is Exfil exfil)
                                 {
                                      float distance = Vector3.Distance(localPlayer.Position, exfil.Position);
                                      if (distance > exfilMaxDistance)
@@ -312,16 +311,14 @@ namespace LoneEftDmaRadar.UI.ESP
 
                                      if (WorldToScreen2WithScale(exfil.Position, out var screen, out float scale, screenWidth, screenHeight))
                                      {
-                                         var dotColor = exfil.Status == Exfil.EStatus.Pending
-                                             ? ToColor(SKPaints.PaintExfilPending)
-                                             : ToColor(SKPaints.PaintExfilOpen);
+                                         var dotColor = ToColor(SKPaints.PaintExfilOpen);
                                          var textColor = GetExfilColorForRender();
 
-                                         // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                                         // AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
                                          float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
                                          ctx.DrawCircle(ToRaw(screen), radius, dotColor, true);
                                          
-                                         // ? AIMVIEW SCALING: Scale text with perspective
+                                         // AIMVIEW SCALING: Scale text with perspective
                                          DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                                          ctx.DrawText(exfil.Name, screen.X + radius + 3, screen.Y + 4, textColor, textSize);
                                      }
@@ -383,7 +380,7 @@ namespace LoneEftDmaRadar.UI.ESP
 
             foreach (var item in lootItems)
             {
-                // ? Skip containers entirely - they're drawn in DrawStaticContainers()
+                // Skip containers entirely - they're drawn in DrawStaticContainers()
                 if (item is StaticLootContainer or LootAirdrop)
                     continue;
 
@@ -431,29 +428,20 @@ namespace LoneEftDmaRadar.UI.ESP
                          inCone = screenAngle <= App.Config.UI.EspLootConeAngle;
                      }
 
-                     // Determine colors
+                     // Determine colors - Priority: Quest > Wishlist > Category > CustomFilter > Valuable > Default
+                     // Wishlist overrides custom filters
                      DxColor circleColor;
                      DxColor textColor;
 
-                     var filterColor = item.CustomFilter?.Color;
-                     if (!string.IsNullOrEmpty(filterColor) && SKColor.TryParse(filterColor, out var skFilterColor))
-                     {
-                         circleColor = ToColor(skFilterColor);
-                         textColor = circleColor;
-                     }
-                     else if (isQuest)
+                     if (isQuest)
                      {
                          circleColor = ToColor(SKPaints.PaintQuestItem);
                          textColor = circleColor;
                      }
-                     else if (item.Important)
+                     else if (item.IsWishlisted)
                      {
-                         circleColor = ToColor(SKPaints.PaintFilteredLoot);
-                         textColor = circleColor;
-                     }
-                     else if (item.IsValuableLoot)
-                     {
-                         circleColor = ToColor(SKPaints.PaintImportantLoot);
+                         // Wishlist items use RED color and override custom filters
+                         circleColor = ToColor(SKPaints.PaintWishlistItem);
                          textColor = circleColor;
                      }
                      else if (isBackpack)
@@ -471,23 +459,39 @@ namespace LoneEftDmaRadar.UI.ESP
                          circleColor = ToColor(SKPaints.PaintFood);
                          textColor = circleColor;
                      }
-                     else if (isCorpse)
-                     {
-                         circleColor = ToColor(SKPaints.PaintCorpse);
-                         textColor = circleColor;
-                     }
                      else
                      {
-                         circleColor = GetLootColorForRender();
-                         textColor = circleColor;
+                         // Check for custom filter color
+                         var filterColor = item.CustomFilter?.Color;
+                         if (!string.IsNullOrEmpty(filterColor) && SKColor.TryParse(filterColor, out var skFilterColor))
+                         {
+                             circleColor = ToColor(skFilterColor);
+                             textColor = circleColor;
+                         }
+                         else if (item.IsValuableLoot)
+                         {
+                             circleColor = ToColor(SKPaints.PaintImportantLoot);
+                             textColor = circleColor;
+                         }
+                         else if (isCorpse)
+                         {
+                             circleColor = ToColor(SKPaints.PaintCorpse);
+                             textColor = circleColor;
+                         }
+                         else
+                         {
+                             circleColor = GetLootColorForRender();
+                             textColor = circleColor;
+                         }
                      }
 
-                     // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                     // AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
                      float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
                      ctx.DrawCircle(ToRaw(screen), radius, circleColor, true);
 
-                     if (item.Important || inCone)
+                     if (item.IsWishlisted || inCone)
                      {
+                         // Use GetUILabel() to get consistent label with "!!" prefix for wishlist items only
                          string text;
                          if (isCorpse && item is LootCorpse corpse)
                          {
@@ -496,19 +500,12 @@ namespace LoneEftDmaRadar.UI.ESP
                          }
                          else
                          {
-                             var shortName = string.IsNullOrWhiteSpace(item.ShortName) ? item.Name : item.ShortName;
-                             text = shortName;
-                             if (App.Config.UI.EspLootPrice)
-                             {
-                                 text = item.Important
-                                     ? shortName
-                                     : $"{shortName} ({LoneEftDmaRadar.Misc.Utilities.FormatNumberKM(item.Price)})";
-                             }
+                             text = item.GetUILabel();
                          }
                          
                          text = $"{text} D:{distance:F0}m";
 
-                         // ? AIMVIEW SCALING: Scale text with perspective
+                         // AIMVIEW SCALING: Scale text with perspective
                          DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
                          ctx.DrawText(text, screen.X + radius + 4, screen.Y + 4, textColor, textSize);
                     }
