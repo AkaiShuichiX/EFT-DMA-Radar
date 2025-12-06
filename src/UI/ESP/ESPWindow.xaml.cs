@@ -309,7 +309,8 @@ namespace LoneEftDmaRadar.UI.ESP
                             DrawStaticContainers(ctx, screenWidth, screenHeight, localPlayer);
                         }
 
-                        // Render Exfils - ALWAYS check if enabled
+                        // Render Exfils - ALWAYS rendered regardless of distance settings
+                        // They are important navigation points and should never be hidden by distance sliders
                         if (Exits is not null && App.Config.UI.EspExfils)
                         {
                             foreach (var exit in Exits)
@@ -318,6 +319,7 @@ namespace LoneEftDmaRadar.UI.ESP
                                 {
                                      if (WorldToScreen2WithScale(exfil.Position, out var screen, out float scale, screenWidth, screenHeight))
                                      {
+                                         float distance = Vector3.Distance(localPlayer.Position, exfil.Position);
                                          var dotColor = ToColor(SKPaints.PaintExfilOpen);
                                          var textColor = GetExfilColorForRender();
 
@@ -327,7 +329,7 @@ namespace LoneEftDmaRadar.UI.ESP
                                          
                                          // AIMVIEW SCALING: Scale text with perspective
                                          DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
-                                         ctx.DrawText(exfil.Name, screen.X + radius + 3, screen.Y + 4, textColor, textSize);
+                                         ctx.DrawText($"{exfil.Name} D:{distance:F0}m", screen.X + radius + 3, screen.Y + 4, textColor, textSize);
                                      }
                                 }
                             }
@@ -601,7 +603,8 @@ namespace LoneEftDmaRadar.UI.ESP
             if (Explosives is null)
                 return;
 
-            const float maxRenderDistance = 25f;
+            // Active tripwires are ALWAYS rendered regardless of distance settings
+            // They are safety-critical and should never be hidden by distance sliders
 
             foreach (var explosive in Explosives)
             {
@@ -613,22 +616,18 @@ namespace LoneEftDmaRadar.UI.ESP
                     if (tripwire.Position == Vector3.Zero)
                         continue;
 
-                    float distance = Vector3.Distance(localPlayer.Position, tripwire.Position);
-                    if (distance > maxRenderDistance)
-                        continue;
-
                     if (!WorldToScreen2WithScale(tripwire.Position, out var screen, out float scale, screenWidth, screenHeight))
                         continue;
 
-                    // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                    float distance = Vector3.Distance(localPlayer.Position, tripwire.Position);
+
+                    // AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
                     float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
+                    ctx.DrawCircle(ToRaw(screen), radius, GetTripwireColorForRender(), true);
 
-                    var color = GetTripwireColorForRender();
-                    ctx.DrawCircle(ToRaw(screen), radius, color, true);
-
-                    // ? AIMVIEW SCALING: Scale text with perspective
+                    // AIMVIEW SCALING: Scale text with perspective
                     DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
-                    ctx.DrawText("Tripwire", screen.X + radius + 4, screen.Y, color, textSize);
+                    ctx.DrawText($"Tripwire D:{distance:F0}m", screen.X + radius + 4, screen.Y, GetTripwireColorForRender(), textSize);
                 }
                 catch
                 {
@@ -642,7 +641,8 @@ namespace LoneEftDmaRadar.UI.ESP
             if (Explosives is null)
                 return;
 
-            const float maxRenderDistance = 25f;
+            // Active grenades are ALWAYS rendered regardless of distance settings
+            // They are safety-critical and should never be hidden by distance sliders
 
             foreach (var explosive in Explosives)
             {
@@ -654,22 +654,18 @@ namespace LoneEftDmaRadar.UI.ESP
                     if (grenade.Position == Vector3.Zero)
                         return;
 
-                    float distance = Vector3.Distance(localPlayer.Position, grenade.Position);
-                    if (distance > maxRenderDistance)
-                        return;
-
                     if (!WorldToScreen2WithScale(grenade.Position, out var screen, out float scale, screenWidth, screenHeight))
                         return;
 
-                    // ? AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
+                    float distance = Vector3.Distance(localPlayer.Position, grenade.Position);
+
+                    // AIMVIEW SCALING: Scale radius with perspective (includes UIScale)
                     float radius = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
+                    ctx.DrawCircle(ToRaw(screen), radius, GetGrenadeColorForRender(), true);
 
-                    var color = GetGrenadeColorForRender();
-                    ctx.DrawCircle(ToRaw(screen), radius, color, true);
-
-                    // ? AIMVIEW SCALING: Scale text with perspective
+                    // AIMVIEW SCALING: Scale text with perspective
                     DxTextSize textSize = scale > 1.5f ? DxTextSize.Medium : DxTextSize.Small;
-                    ctx.DrawText("Grenade", screen.X + radius + 4, screen.Y, color, textSize);
+                    ctx.DrawText($"Grenade D:{distance:F0}m", screen.X + radius + 4, screen.Y, GetGrenadeColorForRender(), textSize);
                 }
                 catch
                 {

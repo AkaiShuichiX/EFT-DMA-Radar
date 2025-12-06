@@ -135,20 +135,18 @@ namespace LoneEftDmaRadar.UI.Skia
             if (Exits is null)
                 return;
 
-            const float maxDistance = 25f; // Maximum render distance for non-player entities
+            // Exfils are ALWAYS rendered regardless of distance settings
+            // They are important navigation points and should never be hidden by distance sliders
 
             foreach (var exit in Exits)
             {
                 if (exit is not Exfil exfil)
                     continue;
 
-                float distance = Vector3.Distance(localPlayer.Position, exfil.Position);
-                if (distance > maxDistance)
-                    continue;
-
                 if (TryProject(exfil.Position, out var screen, out float scale, localPlayer))
                 {
                     var paint = SKPaints.PaintExfilOpen;
+                    float distance = Vector3.Distance(localPlayer.Position, exfil.Position);
 
                     // Scale radius with perspective (from TryProject)
                     float r = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
@@ -159,7 +157,7 @@ namespace LoneEftDmaRadar.UI.Skia
                     float baseFontSize = SKFonts.EspWidgetFont.Size * scale * 0.9f;
                     float fontSize = Math.Clamp(baseFontSize, 8f, 20f);
                     using var font = new SKFont(SKFonts.EspWidgetFont.Typeface, fontSize) { Subpixel = true };
-                    _canvas.DrawText(exfil.Name, new SKPoint(screen.X + r + 3, screen.Y + r + 1), SKTextAlign.Left, font, SKPaints.TextExfil);
+                    _canvas.DrawText($"{exfil.Name} D:{distance:F0}m", new SKPoint(screen.X + r + 3, screen.Y + r + 1), SKTextAlign.Left, font, SKPaints.TextExfil);
                 }
             }
         }
@@ -169,17 +167,14 @@ namespace LoneEftDmaRadar.UI.Skia
             if (Explosives is null)
                 return;
 
-            const float maxDistance = 25f; // Maximum render distance for non-player entities
+            // Active explosives (grenades, tripwires) are ALWAYS rendered regardless of loot distance settings
+            // They are safety-critical and should never be hidden by distance sliders
 
             foreach (var explosive in Explosives)
             {
                 try
                 {
                     if (explosive is null || explosive.Position == Vector3.Zero)
-                        continue;
-
-                    float distance = Vector3.Distance(localPlayer.Position, explosive.Position);
-                    if (distance > maxDistance)
                         continue;
 
                     if (!TryProject(explosive.Position, out var screen, out float scale, localPlayer))
@@ -189,15 +184,17 @@ namespace LoneEftDmaRadar.UI.Skia
                     float r = Math.Clamp(3f * App.Config.UI.UIScale * scale, 2f, 15f);
 
                     string label;
+                    float distance = Vector3.Distance(localPlayer.Position, explosive.Position);
+                    
                     if (explosive is Tripwire tripwire && tripwire.IsActive)
                     {
                         _canvas.DrawCircle(screen.X, screen.Y, r, SKPaints.PaintExplosives);
-                        label = "Tripwire";
+                        label = $"Tripwire D:{distance:F0}m";
                     }
                     else if (explosive is Grenade)
                     {
                         _canvas.DrawCircle(screen.X, screen.Y, r, SKPaints.PaintExplosives);
-                        label = "Grenade";
+                        label = $"Grenade D:{distance:F0}m";
                     }
                     else
                     {
